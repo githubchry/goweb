@@ -3,11 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -82,6 +84,42 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func login(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("method:", r.Method) //获取请求的方法
+	if r.Method == "GET" {
+		t, _ := template.ParseFiles("web/login.html")
+		t.Execute(w, nil)
+	} else {
+		//请求的是登录数据，那么执行登录的逻辑判断
+		//解析传过来的参数，默认不会解析，必须显示调用后服务器才会输出参数信息
+		r.ParseForm() //解析form
+		//这里的request.Form["username"]可以用request.FormValue("username")代替，那么就不需要显示调用  request.ParseForm
+		fmt.Printf("username: %v\n", r.Form["username"])
+		fmt.Printf("password: %v\n", r.Form["password"])
+	}
+}
+
+func user(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("method:", r.Method) //获取请求的方法
+	// 解析url传递的参数
+	r.ParseForm()
+	for k, v := range r.Form {
+		fmt.Println("key:", k)
+		// join() 方法用于把数组中的所有元素放入一个字符串。
+		// 元素是通过指定的分隔符进行分隔的
+		fmt.Println("val:", strings.Join(v, ""))
+	}
+	// 输出到客户端
+	name := r.Form["username"]
+	pass := r.Form["password"]
+	for _, v := range name {
+		fmt.Fprintf(w, "用户名:%v\n", v)
+	}
+	for _, n := range pass {
+		fmt.Fprintf(w, "密码:%v\n", n)
+	}
+}
+
 func main() {
 	// 获取并打印一下本地ip
 	addrs, err := net.InterfaceAddrs()
@@ -102,6 +140,8 @@ func main() {
 	// 处理发往/api/add的http请求
 	http.HandleFunc("/api/addpost", addpost) //POST
 	http.HandleFunc("/api/addget", addget)   //GET
+	http.HandleFunc("/login", login)         //GET + POST
+	http.HandleFunc("/user", user)           //GET + POST
 	http.HandleFunc("/echo", echo)
 
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等
