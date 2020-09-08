@@ -1,0 +1,67 @@
+<html>
+<body>
+  操作数A: <input type="text" id="num1" /> </br>
+  操作数B: <input type="text" id="num2" /> </br>
+  <button type="button" name="cmdButCALCULATE" onclick="Calculate();"> 求和 </button>
+  结果：<p id="result"> </p>
+  </br>
+  <p id="wsStatus"> </p>
+  <button type="button" name="cmdSendMsg" onclick="SendMsg();"> 发送 </button>
+  <input type="text" id="sendmsg" /></br>
+  接收到消息:<p id="wsRecv"> </p></br>
+  <!-- 内嵌的javascript代码 -->
+  <script>
+    // 计算按钮的点击响应函数
+    async function Calculate() {
+      // 获取输入框内的值
+      var num1 = document.getElementById('num1').value;
+      var num2 = document.getElementById('num2').value;
+      const url = '/api/add';
+      const data = {
+        OperandA: (Number)(num1),
+        OperandB: (Number)(num2)
+      };
+      console.log(data)
+      const otherParam = {
+        headers: { "content-type": "application/json; charset=UTF-8" },
+        // 将请求javascript object转换为JSON字符串
+        body: JSON.stringify(data),
+        method: "POST"
+      }
+      // 发出http post请求
+      let response = await fetch(url, otherParam)
+
+      // 等待响应，并将响应作为JSON字符串反序列化为javascript object
+      let js = await response.json()
+      console.log(js)
+      // 使用结果来更新对应元素的内容
+      document.getElementById('result').innerText = js.Result
+    }
+    var ws = null;
+    window.onload=function(){
+      var domain = document.domain; //获取主机名        例如：172.20.11.111
+      var port = location.port;     //获取端口号        例如：8000
+      var host = location.host;     //获取主机名:端口号 例如：172.20.11.111:8000
+
+      ws = new WebSocket("ws://"+host+"/echo");
+      
+      ws.onopen = function () {
+        // Web Socket 已连接上，使用 send() 方法发送数据
+        
+        document.getElementById('wsStatus').innerText = "websocket已连接";
+        
+        ws.onmessage = function (evt) {
+          document.getElementById('wsRecv').innerText += evt.data + "\n";
+        };
+        
+      }
+    }
+    
+    function SendMsg() {
+      ws.send(document.getElementById('sendmsg').value);
+    }
+    
+  </script>
+
+</body>
+</html>
