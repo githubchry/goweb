@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/gorilla/websocket"
 )
@@ -20,12 +21,29 @@ type AddReply struct {
 	Result int
 }
 
-func add(w http.ResponseWriter, r *http.Request) {
+func addpost(w http.ResponseWriter, r *http.Request) {
 	var addReq AddReq
 	// 将请求的body作为JSON字符串解码，并存入AddReq结构体内
 	json.NewDecoder(r.Body).Decode(&addReq)
 	// 打印请求数据
-	log.Println("req: ", addReq.OperandA, addReq.OperandB)
+	log.Println("post req: ", addReq.OperandA, addReq.OperandB)
+	var addReply AddReply
+	// 进行加法计算，并保存结果到结构体内
+	addReply.Result = addReq.OperandA + addReq.OperandB
+	// 将结果结构体进行JSON编码，并写入响应
+	json.NewEncoder(w).Encode(addReply)
+}
+
+func addget(w http.ResponseWriter, r *http.Request) {
+	values := r.URL.Query()
+
+	var addReq AddReq
+	addReq.OperandA, _ = strconv.Atoi(values.Get("OperandA"))
+	addReq.OperandB, _ = strconv.Atoi(values.Get("OperandB"))
+
+	// 打印请求数据
+	log.Println("get req: ", addReq.OperandA, addReq.OperandB)
+
 	var addReply AddReply
 	// 进行加法计算，并保存结果到结构体内
 	addReply.Result = addReq.OperandA + addReq.OperandB
@@ -63,6 +81,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
 func main() {
 	// 获取并打印一下本地ip
 	addrs, err := net.InterfaceAddrs()
@@ -81,7 +100,8 @@ func main() {
 	}
 
 	// 处理发往/api/add的http请求
-	http.HandleFunc("/api/add", add)
+	http.HandleFunc("/api/addpost", addpost) //POST
+	http.HandleFunc("/api/addget", addget)   //GET
 	http.HandleFunc("/echo", echo)
 
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等
