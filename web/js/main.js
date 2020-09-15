@@ -18,7 +18,7 @@ pc.onaddstream = function(event) {
 
 async function getRemoteSdp() {
     // const url = 'http://172.17.58.119:8083/recive';
-    const url = 'http://172.17.58.119:8080/api/swapsdp';
+    const url = '/api/swapsdp';
     const options  = {
         headers: { "content-type": "application/json; charset=UTF-8" },
         // 将请求javascript object转换为JSON字符串
@@ -40,10 +40,10 @@ async function getRemoteSdp() {
   
 async function getCodecInfo() {
     // const url = 'http://172.17.58.119:8083/codec/demo1';
-    const url = 'http://172.17.58.119:8080/api/getcodec';
+    const url = '/api/getcodec';
     const options  = {
         headers: { "content-type": "application/json; charset=UTF-8" },
-        body: "rtsp://172.17.58.119:8554/slamtv60.264",
+        body: "rtsp://172.24.69.55:8554/slamtv60.264",
         method: "POST"
     }
 

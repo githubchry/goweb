@@ -4,9 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html/template"
-	"io/ioutil"
 	"log"
+	"github.com/githubchry/goweb/drivers"
+	"github.com/githubchry/goweb/models"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -95,30 +96,16 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func login(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("method:", r.Method) //获取请求的方法
-	if r.Method == "GET" {
-		t, _ := template.ParseFiles("web/login.html")
-		t.Execute(w, nil)
-	} else {
-		//请求的是登录数据，那么执行登录的逻辑判断
-		//解析传过来的参数，默认不会解析，必须显示调用后服务器才会输出参数信息
-		r.ParseForm() //解析form
-		//这里的request.Form["username"]可以用request.FormValue("username")代替，那么就不需要显示调用  request.ParseForm
-		fmt.Printf("username: %v\n", r.Form["username"])
-		fmt.Printf("password: %v\n", r.Form["password"])
-	}
-}
 
 func user(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("method:", r.Method) //获取请求的方法
+	log.Println("method:", r.Method) //获取请求的方法
 	// 解析url传递的参数
 	r.ParseForm()
 	for k, v := range r.Form {
-		fmt.Println("key:", k)
+		log.Println("key:", k)
 		// join() 方法用于把数组中的所有元素放入一个字符串。
 		// 元素是通过指定的分隔符进行分隔的
-		fmt.Println("val:", strings.Join(v, ""))
+		log.Println("val:", strings.Join(v, ""))
 	}
 	// 输出到客户端
 	name := r.Form["username"]
@@ -244,7 +231,7 @@ func swapsdp(w http.ResponseWriter, r *http.Request) {
 	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
 		// Register text message handling
 		d.OnMessage(func(msg webrtc.DataChannelMessage) {
-			fmt.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
+			log.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
 			timer1.Reset(2 * time.Second)
 		})
 	})
@@ -255,10 +242,10 @@ func swapsdp(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Connection State has changed %s \n", connectionState.String())
 		if connectionState != webrtc.ICEConnectionStateConnected {
 			// 连接不成功直接退出
-			log.Println("Client Close Exit")
+			log.Println("Client Exit Exit")
 			err := peerConnection.Close()
 			if err != nil {
-				log.Println("peerConnection Close error", err)
+				log.Println("peerConnection Exit error", err)
 			}
 			control <- true
 			return
@@ -278,7 +265,7 @@ func swapsdp(w http.ResponseWriter, r *http.Request) {
 			var start bool // 发送标志
 			var Vts time.Duration
 			var Vpre time.Duration
-			session.
+
 			for {
 				// 从流里面读数据  注意拿到的nalu前4个字节是长度, 后面的data是没有00 00 00 01的
 				pkt, err := session.ReadPacket()
@@ -323,7 +310,7 @@ func swapsdp(w http.ResponseWriter, r *http.Request) {
 
 			err = session.Close()
 			if err != nil {
-				log.Println("session Close error", err)
+				log.Println("session Exit error", err)
 			}
 			log.Println("reconnect wait 5s")
 
@@ -333,13 +320,32 @@ func swapsdp(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
+	// 初始化连接到MongoDB
+	err := drivers.MongoDBInit()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	// 初始化连接到RedisDB
+	err = drivers.RedisDBInit()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	// 查询总数
+	name, size := models.NewMgo().Count()
+	log.Printf(" documents name: %+v documents size %d \n", name, size)
+
 	// rtsp 转 webrtc
 	rtsp.DebugRtsp = true // 打印rtsp流程
 
 	// 获取并打印一下本地ip
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		os.Exit(1)
 	}
 
@@ -347,7 +353,7 @@ func main() {
 		// 检查ip地址判断是否回环地址
 		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
-				fmt.Printf("%s:8080\n", ipnet.IP.String())
+				log.Printf("%s:8080\n", ipnet.IP.String())
 			}
 		}
 	}
@@ -357,9 +363,9 @@ func main() {
 	http.HandleFunc("/api/addget", addget)     //GET
 	http.HandleFunc("/api/getcodec", getcodec) //POST
 	http.HandleFunc("/api/swapsdp", swapsdp)   //POST
-	http.HandleFunc("/login", login)           //GET + POST
-	http.HandleFunc("/user", user)             //GET + POST
-	http.HandleFunc("/echo", echo)             //WEBSOCKET
+	http.HandleFunc("/api/login", login)           //GET + POST
+	http.HandleFunc("/api/register", register)             //GET + POST
+	http.HandleFunc("/api/echo", echo)             //WEBSOCKET
 
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等
 	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./web/"))))
@@ -367,4 +373,7 @@ func main() {
 	// 启动http服务
 	log.Fatal(http.ListenAndServe(":8080", nil))
 
+	// 断开连接
+	drivers.MongoDBExit()
+	drivers.RedisDBExit()
 }
