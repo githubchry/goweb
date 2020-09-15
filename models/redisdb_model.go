@@ -24,7 +24,12 @@ func InsertToken(key string, val string, time int) error {
 }
 
 //
-func FindToken(token string) (string, error) {
+func FindToken(key string) (string, error) {
 
-	return redis.String(drivers.RedisDbConn.Do("GET", token))
+	return redis.String(drivers.RedisDbConn.Do("GET", key))
+}
+
+func DeleteToken(key string) {
+	drivers.RedisDbConn.Do("DEL", key)
+	return
 }

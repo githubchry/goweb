@@ -50,7 +50,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		log.Println("token", token)
 
 		// 把token存到redis
-		models.InsertToken(token, result.Username, 120);
+		models.InsertToken(result.Username, token, 120);
 
 		rsp.Result = 0
 		rsp.Message = "登录成功!"
@@ -67,6 +67,23 @@ func login(w http.ResponseWriter, r *http.Request) {
 	// 将结果结构体进行JSON编码，并写入响应
 	json.NewEncoder(w).Encode(rsp)
 
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+
+	// 从redis查询token
+	token, err := models.FindToken(r.Header.Get("Username"))
+	if err != nil {
+		return
+	}
+
+	if token != r.Header.Get("Token") {
+		return
+	}
+
+	models.DeleteToken(r.Header.Get("Username"))
+	log.Println("注销用户:", r.Header.Get("Username"))
+	return
 }
 
 func register(w http.ResponseWriter, r *http.Request) {

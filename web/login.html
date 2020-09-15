@@ -76,6 +76,7 @@
 
 					if (0 == rspjson.result) {
                         localStorage.setItem("Token", rspjson.token);
+						localStorage.setItem("Username", loginInfo.username);
 						window.location.href = "index.html";
 					}
 				})

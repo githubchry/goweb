@@ -32,25 +32,35 @@ type AddReq struct {
 
 // AddRsp represents the result of an addition operation.
 type AddRsp struct {
-	Result int	// 结果 OperandA + OperandB
-	Status int	// 状态 0表示sucess
-	Message string	// 消息
+	Result int		`json:"result"`	// 结果 OperandA + OperandB
+	Status int		`json:"status"`	// 状态 0表示sucess
+	Message string	`json:"message"`// 消息
 }
 
 func addpost(w http.ResponseWriter, r *http.Request) {
 
+	//log.Println(r.Header.Get("Username"), r.Header.Get("Token"))
+
 	var addRsp AddRsp
 	// 从redis查询token
-	username, err := models.FindToken(r.Header.Get("Token"))
+	token, err := models.FindToken(r.Header.Get("Username"))
 	if err != nil {
-		log.Println("非法访问: Token缺失或无效!")
+		log.Println("非法访问: Username/Token缺失或无效!")
 		addRsp.Status = -1
-		addRsp.Message = "非法访问: Token缺失或无效!"
+		addRsp.Message = "非法访问: Username/Token缺失或无效!"
 		json.NewEncoder(w).Encode(addRsp)
 		return
 	}
 
-	log.Println("合法用户:", username)
+	if token != r.Header.Get("Token") {
+		log.Println("非法访问: Token无效或被重复登录顶号!")
+		addRsp.Status = -2
+		addRsp.Message = "非法访问: Token无效或被重复登录顶号!"
+		json.NewEncoder(w).Encode(addRsp)
+		return
+	}
+
+	// 延长token生存周期?
 
 	var addReq AddReq
 	// 将请求的body作为JSON字符串解码，并存入AddReq结构体内
@@ -335,6 +345,8 @@ func swapsdp(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// log打印设置: Lshortfile文件名+行号  LstdFlags日期加时间  LstdFlags  [Go语言标准库之log](https://www.cnblogs.com/nickchen121/p/11517450.html)
+	log.SetFlags(log.Lshortfile | log.LstdFlags)
 
 	// 初始化连接到MongoDB
 	err := drivers.MongoDBInit()
@@ -378,8 +390,9 @@ func main() {
 	http.HandleFunc("/api/addget", addget)     //GET
 	http.HandleFunc("/api/getcodec", getcodec) //POST
 	http.HandleFunc("/api/swapsdp", swapsdp)   //POST
-	http.HandleFunc("/api/login", login)           //GET + POST
-	http.HandleFunc("/api/register", register)             //GET + POST
+	http.HandleFunc("/api/login", login)   		// POST
+	http.HandleFunc("/api/logout", logout) 	// POST
+	http.HandleFunc("/api/register", register)	// POST
 	http.HandleFunc("/api/echo", echo)             //WEBSOCKET
 
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等
