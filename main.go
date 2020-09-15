@@ -30,22 +30,37 @@ type AddReq struct {
 	OperandB int
 }
 
-// AddReply represents the result of an addition operation.
-type AddReply struct {
-	Result int
+// AddRsp represents the result of an addition operation.
+type AddRsp struct {
+	Result int	// 结果 OperandA + OperandB
+	Status int	// 状态 0表示sucess
+	Message string	// 消息
 }
 
 func addpost(w http.ResponseWriter, r *http.Request) {
+
+	var addRsp AddRsp
+	// 从redis查询token
+	username, err := models.FindToken(r.Header.Get("Token"))
+	if err != nil {
+		log.Println("非法访问: Token缺失或无效!")
+		addRsp.Status = -1
+		addRsp.Message = "非法访问: Token缺失或无效!"
+		json.NewEncoder(w).Encode(addRsp)
+		return
+	}
+
+	log.Println("合法用户:", username)
+
 	var addReq AddReq
 	// 将请求的body作为JSON字符串解码，并存入AddReq结构体内
 	json.NewDecoder(r.Body).Decode(&addReq)
 	// 打印请求数据
 	log.Println("post req: ", addReq.OperandA, addReq.OperandB)
-	var addReply AddReply
 	// 进行加法计算，并保存结果到结构体内
-	addReply.Result = addReq.OperandA + addReq.OperandB
+	addRsp.Result = addReq.OperandA + addReq.OperandB
 	// 将结果结构体进行JSON编码，并写入响应
-	json.NewEncoder(w).Encode(addReply)
+	json.NewEncoder(w).Encode(addRsp)
 }
 
 func addget(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +73,7 @@ func addget(w http.ResponseWriter, r *http.Request) {
 	// 打印请求数据
 	log.Println("get req: ", addReq.OperandA, addReq.OperandB)
 
-	var addReply AddReply
+	var addReply AddRsp
 	// 进行加法计算，并保存结果到结构体内
 	addReply.Result = addReq.OperandA + addReq.OperandB
 	// 将结果结构体进行JSON编码，并写入响应

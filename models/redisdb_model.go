@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/githubchry/goweb/drivers"
+	"github.com/gomodule/redigo/redis"
 	"log"
 )
 
@@ -20,4 +21,10 @@ func InsertToken(key string, val string, time int) error {
 	}
 
 	return err
+}
+
+//
+func FindToken(token string) (string, error) {
+
+	return redis.String(drivers.RedisDbConn.Do("GET", token))
 }

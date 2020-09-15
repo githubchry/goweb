@@ -1,15 +1,11 @@
 package main
 
 import (
-	"crypto/md5"
 	"encoding/json"
-	"fmt"
 	"github.com/githubchry/goweb/models"
-	"io"
+	"github.com/satori/go.uuid"
 	"log"
 	"net/http"
-	"strconv"
-	"time"
 )
 
 type User struct {
@@ -19,8 +15,8 @@ type User struct {
 }
 
 
-// AddReply represents the result of an addition operation.
-type Reply struct {
+// UserRsp represents the result of an addition operation.
+type UserRsp struct {
 	Result 	int		`json:"result"`
 	Message string 	`json:"message"`
 	Token 	string 	`json:"token"`
@@ -41,37 +37,35 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	// 操作mongodb
 	// 返回结果
-	var reply Reply
+	var rsp UserRsp
 
 	// 查询用户名是否已存在
 	var result User
 	models.NewMgo().FindOne("username", user.Username).Decode(&result)
 
 	if result.Password == user.Password {
-		// 账号密码校验通过, 创建Token并返回
-		h := md5.New()
-		io.WriteString(h, strconv.FormatInt(time.Now().Unix(), 10))	//把当前时间秒数以十进制转成字符串写到h
-		io.WriteString(h, user.Username)	// 除了写入时间, 再追加用户名
-		token := fmt.Sprintf("%x", h.Sum(nil))
+
+		// 利用uuid库生成唯一且随机的token
+		token := uuid.NewV4().String()
 		log.Println("token", token)
 
 		// 把token存到redis
-		models.InsertToken(result.Username, token, 120);
+		models.InsertToken(token, result.Username, 120);
 
-		reply.Result = 0
-		reply.Message = "登录成功!"
-		reply.Token = token
+		rsp.Result = 0
+		rsp.Message = "登录成功!"
+		rsp.Token = token
 	} else if len(result.Username) <= 0 {
-		reply.Result = 1
-		reply.Message = "用户名不存在!"
+		rsp.Result = 1
+		rsp.Message = "用户名不存在!"
 	} else {
-		reply.Result = 2
-		reply.Message = "密码错误!"
+		rsp.Result = 2
+		rsp.Message = "密码错误!"
 	}
 
-	log.Println(reply.Message)
+	log.Println(rsp.Message)
 	// 将结果结构体进行JSON编码，并写入响应
-	json.NewEncoder(w).Encode(reply)
+	json.NewEncoder(w).Encode(rsp)
 
 }
 
@@ -88,7 +82,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 	// 操作mongodb
 	// 返回结果
-	var reply Reply
+	var rsp UserRsp
 
 	// 删除
 	//deleteResult := models.NewMgo().DeleteMany("username", user.Username)
@@ -99,18 +93,18 @@ func register(w http.ResponseWriter, r *http.Request) {
 	models.NewMgo().FindOne("username", user.Username).Decode(&result)
 	if len(result.Username) > 0 {
 		// 用户名已注册
-		reply.Result = 1
-		reply.Message = "用户名已注册!"
+		rsp.Result = 1
+		rsp.Message = "用户名已注册!"
 	} else {
 		// 单个插入
 		InsertOneResult := models.NewMgo().InsertOne(user)
 		log.Println("Inserted a single document: ", InsertOneResult)
 
-		reply.Result = 0
-		reply.Message = "注册成功!"
+		rsp.Result = 0
+		rsp.Message = "注册成功!"
 	}
 
-	log.Println(reply.Message)
+	log.Println(rsp.Message)
 	// 将结果结构体进行JSON编码，并写入响应
-	json.NewEncoder(w).Encode(reply)
+	json.NewEncoder(w).Encode(rsp)
 }

@@ -9,5 +9,6 @@ require (
 	github.com/gomodule/redigo v1.8.2
 	github.com/gorilla/websocket v1.4.2
 	github.com/pion/webrtc/v2 v2.2.23
+	github.com/satori/go.uuid v1.2.0
 	go.mongodb.org/mongo-driver v1.4.1
 )
