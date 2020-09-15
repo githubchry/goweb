@@ -74,6 +74,28 @@ func addpost(w http.ResponseWriter, r *http.Request) {
 }
 
 func addget(w http.ResponseWriter, r *http.Request) {
+
+	log.Println(r.Header.Get("Username"), r.Header.Get("Token"))
+
+	var addRsp AddRsp
+	// 从redis查询token
+	token, err := models.FindToken(r.Header.Get("Username"))
+	if err != nil {
+		log.Println("非法访问: Username/Token缺失或无效!")
+		addRsp.Status = -1
+		addRsp.Message = "非法访问: Username/Token缺失或无效!"
+		json.NewEncoder(w).Encode(addRsp)
+		return
+	}
+
+	if token != r.Header.Get("Token") {
+		log.Println("非法访问: Token无效或被重复登录顶号!")
+		addRsp.Status = -2
+		addRsp.Message = "非法访问: Token无效或被重复登录顶号!"
+		json.NewEncoder(w).Encode(addRsp)
+		return
+	}
+
 	values := r.URL.Query()
 
 	var addReq AddReq
@@ -83,11 +105,10 @@ func addget(w http.ResponseWriter, r *http.Request) {
 	// 打印请求数据
 	log.Println("get req: ", addReq.OperandA, addReq.OperandB)
 
-	var addReply AddRsp
 	// 进行加法计算，并保存结果到结构体内
-	addReply.Result = addReq.OperandA + addReq.OperandB
+	addRsp.Result = addReq.OperandA + addReq.OperandB
 	// 将结果结构体进行JSON编码，并写入响应
-	json.NewEncoder(w).Encode(addReply)
+	json.NewEncoder(w).Encode(addRsp)
 }
 
 //websocket由http升级而来，首先会发送附带Upgrade请求头的Http请求，所以我们需要在处理Http请求时拦截请求并判断其是否为websocket升级请求

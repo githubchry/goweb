@@ -4,7 +4,7 @@ let pc = new RTCPeerConnection(null);
 
 // onnegotiationneeded在要求sesssion协商时发生
 pc.onnegotiationneeded = async function() {
-    // 创建并设置本地SDP(会话描述协议Session Description Protocol) 
+    // 创建并设置本地SDP(会话描述协议Session Description Protocol)
     let offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     // 获取远端SDP
@@ -25,7 +25,7 @@ async function getRemoteSdp() {
         body: btoa(pc.localDescription.sdp),
         method: "POST"
     }
-    
+
     console.log(btoa(pc.localDescription.sdp))
     // 发出http POST 请求
     let response = await fetch(url, options)
@@ -37,7 +37,7 @@ async function getRemoteSdp() {
         sdp: atob(remoteSdp)
     }))
 }
-  
+
 async function getCodecInfo() {
     // const url = 'http://172.17.58.119:8083/codec/demo1';
     const url = '/api/getcodec';
@@ -64,7 +64,7 @@ async function getCodecInfo() {
     sendChannel = pc.createDataChannel('foo');
 
     sendChannel.onclose = () => console.log('sendChannel has closed');
-    
+
     sendChannel.onopen = () => {
         console.log('sendChannel has opened');
         sendChannel.send('ping');
@@ -74,9 +74,9 @@ async function getCodecInfo() {
     }
 
     sendChannel.onmessage = e => console.log(`Message from DataChannel '${sendChannel.label}' payload '${e.data}'`);
-    
+
 }
-  
+
 window.onload = function() {
     getCodecInfo();
 }

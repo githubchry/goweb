@@ -13,114 +13,125 @@
 接收到消息:<p id="wsRecv"> </p></br>
 <!-- 内嵌的javascript代码 -->
 <script>
-	// 计算按钮的点击响应函数
-	async function logout() {
+    // 计算按钮的点击响应函数
+    async function logout() {
 
-		const url = '/api/logout';
-		const options = {
-			headers: {
-				"content-type": "application/json; charset=UTF-8",
-				"Username":localStorage.getItem("Username"),
-				"Token": localStorage.getItem("Token")
-			},
-			method: "POST"
-		}
+        const url = '/api/logout';
+        const options = {
+            headers: {
+                "content-type": "application/json; charset=UTF-8",
+                "Username":localStorage.getItem("Username"),
+                "Token": localStorage.getItem("Token")
+            },
+            method: "POST"
+        }
 
-		// 发出http post请求, 等待响应
-		let rsp = await fetch(url, options)
+        // 发出http post请求, 等待响应
+        let rsp = await fetch(url, options)
 
-		localStorage.setItem("Token", "");
-		localStorage.setItem("Username", "");
-		window.location.href = "login.html";
+        localStorage.setItem("Token", "");
+        localStorage.setItem("Username", "");
+        window.location.href = "login.html";
 
-	}
+    }
 
-	// 计算按钮的点击响应函数
-	async function addpost() {
-		// 获取输入框内的值
-		var num1 = document.getElementById('num1').value;
-		var num2 = document.getElementById('num2').value;
-		const url = '/api/addpost';
-		const data = {
-			OperandA: (Number)(num1),
-			OperandB: (Number)(num2)
-		};
-		console.log(data)
-		console.log(localStorage.getItem("Token"))
-		const options = {
-			headers: {
-				"content-type": "application/json; charset=UTF-8",
-				"Username":localStorage.getItem("Username"),
-				"Token": localStorage.getItem("Token")
-			},
-			// 将请求javascript object转换为JSON字符串
-			body: JSON.stringify(data),
-			method: "POST"
-		}
-		// 发出http post请求
-		let response = await fetch(url, options)
+    // 计算按钮的点击响应函数
+    async function addpost() {
+        // 获取输入框内的值
+        var num1 = document.getElementById('num1').value;
+        var num2 = document.getElementById('num2').value;
+        const url = '/api/addpost';
+        const data = {
+            OperandA: (Number)(num1),
+            OperandB: (Number)(num2)
+        };
+        console.log(data)
+        console.log(localStorage.getItem("Token"))
+        const options = {
+            headers: {
+                "content-type": "application/json; charset=UTF-8",
+                "Username":localStorage.getItem("Username"),
+                "Token": localStorage.getItem("Token")
+            },
+            // 将请求javascript object转换为JSON字符串
+            body: JSON.stringify(data),
+            method: "POST"
+        }
+        // 发出http post请求
+        let response = await fetch(url, options)
 
-		// 等待响应，并将响应作为JSON字符串反序列化为javascript object
-		let rspjson = await response.json()
-		console.log(rspjson)
+        // 等待响应，并将响应作为JSON字符串反序列化为javascript object
+        let rspjson = await response.json()
+        console.log(rspjson)
 
-		if (0 == rspjson.status) {
-			// 使用结果来更新对应元素的内容
-			document.getElementById('result').innerText = rspjson.result
-		} else {
-			alert(rspjson.message + "\n即将重新登录!");
-			window.location.href = "login.html";
-		}
+        if (0 == rspjson.status) {
+            // 使用结果来更新对应元素的内容
+            document.getElementById('result').innerText = rspjson.result
+        } else {
+            alert(rspjson.message + "\n即将重新登录!");
+            window.location.href = "login.html";
+        }
 
-	}
+    }
 
-	async function addget() {
-		// 获取输入框内的值
-		var num1 = document.getElementById('num1').value;
-		var num2 = document.getElementById('num2').value;
-		const url = '/api/addget?OperandA=' + num1 + '&OperandB=' + num2;
+    async function addget() {
+        // 获取输入框内的值
+        var num1 = document.getElementById('num1').value;
+        var num2 = document.getElementById('num2').value;
+        const url = '/api/addget?OperandA=' + num1 + '&OperandB=' + num2;
 
-		console.log(url)
-		const options = {
-			method: "GET"
-		}
-		// 发出http post请求
-		let response = await fetch(url, options)
+        console.log(url)
+        const options = {
+            headers: {
+                "content-type": "application/json; charset=UTF-8",
+                "Username":localStorage.getItem("Username"),
+                "Token": localStorage.getItem("Token")
+            },
+            method: "GET"
+        }
+        // 发出http post请求
+        let response = await fetch(url, options)
 
-		// 等待响应，并将响应作为JSON字符串反序列化为javascript object
-		let js = await response.json()
-		console.log(js)
-		// 使用结果来更新对应元素的内容
-		document.getElementById('result').innerText = js.Result
-	}
+        // 等待响应，并将响应作为JSON字符串反序列化为javascript object
+        let rspjson = await response.json()
+        console.log(rspjson)
 
-	var ws = null;
-	window.onload = function() {
-		var domain = document.domain; //获取主机名        例如：172.20.11.111
-		var port = location.port; //获取端口号        例如：8000
-		var host = location.host; //获取主机名:端口号 例如：172.20.11.111:8000
+        if (0 == rspjson.status) {
+            // 使用结果来更新对应元素的内容
+            document.getElementById('result').innerText = rspjson.result
+        } else {
+            alert(rspjson.message + "\n即将重新登录!");
+            window.location.href = "login.html";
+        }
+    }
 
-		ws = new WebSocket("ws://" + host + "/echo");
-		ws.onopen = function() {
-			// Web Socket 已连接 ws.readyState = 1
-			document.getElementById('wsStatus').innerText = "websocket已连接";
+    var ws = null;
+    window.onload = function() {
+        var domain = document.domain; //获取主机名        例如：172.20.11.111
+        var port = location.port; //获取端口号        例如：8000
+        var host = location.host; //获取主机名:端口号 例如：172.20.11.111:8000
 
-			ws.onmessage = function(evt) {
-				document.getElementById('wsRecv').innerText += evt.data + "\n";
-			};
+        ws = new WebSocket("ws://" + host + "/api/echo");
+        ws.onopen = function() {
+            // Web Socket 已连接 ws.readyState = 1
+            document.getElementById('wsStatus').innerText = "websocket已连接";
 
-			ws.onclose = function(evt) {
-				// Web Socket 已断开 ws.readyState = 3
-				document.getElementById('wsStatus').innerText = "websocket已断开";
-			};
-		}
-	}
+            ws.onmessage = function(evt) {
+                document.getElementById('wsRecv').innerText += evt.data + "\n";
+            };
 
-	function SendMsg() {
-		if (1 == ws.readyState) {
-			ws.send(document.getElementById('sendmsg').value);
-		}
-	}
+            ws.onclose = function(evt) {
+                // Web Socket 已断开 ws.readyState = 3
+                document.getElementById('wsStatus').innerText = "websocket已断开";
+            };
+        }
+    }
+
+    function SendMsg() {
+        if (1 == ws.readyState) {
+            ws.send(document.getElementById('sendmsg').value);
+        }
+    }
 </script>
 
 </body>

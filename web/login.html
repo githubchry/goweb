@@ -1,86 +1,86 @@
 <html>
-	<head>
-		<title></title>
-	</head>
-	<body>
+<head>
+	<title></title>
+</head>
+<body>
 
-		<div class="mui-content">
-			<form class="mui-input-group" action="/user" method="post">
-				<div class="mui-input-row">
-					<label>账号</label>
-					<input id='username' type="text" class="mui-input-clear mui-input" placeholder="请输入账号">
-				</div>
-				<div class="mui-input-row">
-					<label>密码</label>
-					<input id='password' type="password" class="mui-input-clear mui-input" placeholder="请输入密码">
-				</div>
-			</form>
-			<div class="mui-content-padded">
-				<button id='login' class="mui-btn mui-btn-block mui-btn-primary">登录</button>
-			</div>
-			<div class="mui-content-padded">
-				<p id='result'></p>
-			</div>
+<div class="mui-content">
+	<form class="mui-input-group" action="/user" method="post">
+		<div class="mui-input-row">
+			<label>账号</label>
+			<input id='username' type="text" class="mui-input-clear mui-input" placeholder="请输入账号">
 		</div>
+		<div class="mui-input-row">
+			<label>密码</label>
+			<input id='password' type="password" class="mui-input-clear mui-input" placeholder="请输入密码">
+		</div>
+	</form>
+	<div class="mui-content-padded">
+		<button id='login' class="mui-btn mui-btn-block mui-btn-primary">登录</button>
+	</div>
+	<div class="mui-content-padded">
+		<p id='result'></p>
+	</div>
+</div>
 
-		<script src="js/md5.js"></script>
-		<script>
-			window.onload = function init() {
+<script src="js/md5.js"></script>
+<script>
+	window.onload = function init() {
 
-				var loginButton = document.getElementById('login');
-				var usernameBox = document.getElementById('username');
-				var passwordBox = document.getElementById('password');
+		var loginButton = document.getElementById('login');
+		var usernameBox = document.getElementById('username');
+		var passwordBox = document.getElementById('password');
 
-				usernameBox.value = 'chry';
-				passwordBox.value = 'chry';
+		usernameBox.value = 'chry';
+		passwordBox.value = 'chry';
 
-				loginButton.addEventListener('click', async function(event) {
-					var loginInfo = {
-						username: usernameBox.value,
-						password: passwordBox.value
-					};
+		loginButton.addEventListener('click', async function(event) {
+			var loginInfo = {
+				username: usernameBox.value,
+				password: passwordBox.value
+			};
 
-					//用户名以字母下划线开头，由数字和字母组成 2-16位
-					var usernameReg = /^[a-zA-z_]\w{1,15}$/;
-					if (!usernameReg.test(loginInfo.username)) {
-						alert('用户名只能由数字/字母/下划线组成(2-16位, 不支持中文、不能以数字开头)。');
-						return;
-					}
-
-					//密码 由数字/字母/下划线组成 2-16位
-					var passwordReg = /^(\w){2,16}$/;
-					if (!passwordReg.test(loginInfo.password)) {
-						alert('密码只能由数字/字母/下划线组成(2-16位)。');
-						return;
-					}
-
-					loginInfo.password = md5(loginInfo.password);
-					console.log(loginInfo)
-
-					const url = '/api/login';
-					const options = {
-						headers: {
-							"content-type": "application/json; charset=UTF-8"
-						},
-						// 将请求javascript object转换为JSON字符串
-						body: JSON.stringify(loginInfo),
-						method: "POST"
-					}
-
-					// 发出http post请求, 等待响应
-					let rsp = await fetch(url, options)
-					// 将响应作为JSON字符串反序列化为javascript object
-					let rspjson = await rsp.json()
-					console.log(rspjson)
-					document.getElementById('result').innerText = rspjson.message;
-
-					if (0 == rspjson.result) {
-                        localStorage.setItem("Token", rspjson.token);
-						localStorage.setItem("Username", loginInfo.username);
-						window.location.href = "index.html";
-					}
-				})
+			//用户名以字母下划线开头，由数字和字母组成 2-16位
+			var usernameReg = /^[a-zA-z_]\w{1,15}$/;
+			if (!usernameReg.test(loginInfo.username)) {
+				alert('用户名只能由数字/字母/下划线组成(2-16位, 不支持中文、不能以数字开头)。');
+				return;
 			}
-		</script>
-	</body>
+
+			//密码 由数字/字母/下划线组成 2-16位
+			var passwordReg = /^(\w){2,16}$/;
+			if (!passwordReg.test(loginInfo.password)) {
+				alert('密码只能由数字/字母/下划线组成(2-16位)。');
+				return;
+			}
+
+			loginInfo.password = md5(loginInfo.password);
+			console.log(loginInfo)
+
+			const url = '/api/login';
+			const options = {
+				headers: {
+					"content-type": "application/json; charset=UTF-8"
+				},
+				// 将请求javascript object转换为JSON字符串
+				body: JSON.stringify(loginInfo),
+				method: "POST"
+			}
+
+			// 发出http post请求, 等待响应
+			let rsp = await fetch(url, options)
+			// 将响应作为JSON字符串反序列化为javascript object
+			let rspjson = await rsp.json()
+			console.log(rspjson)
+			document.getElementById('result').innerText = rspjson.message;
+
+			if (0 == rspjson.result) {
+				localStorage.setItem("Token", rspjson.token);
+				localStorage.setItem("Username", loginInfo.username);
+				window.location.href = "index.html";
+			}
+		})
+	}
+</script>
+</body>
 </html>

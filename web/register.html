@@ -1,111 +1,111 @@
 <html xmlns="http://www.w3.org/1999/html">
-	<head>
-		<title>注册</title>
-	</head>
-	<body>
+<head>
+	<title>注册</title>
+</head>
+<body>
 
-		<div class="mui-content">
-			<form class="mui-input-group">
-				<div class="mui-input-row">
-					<label>账号</label>
-					<input id='username' type="text" class="mui-input-clear mui-input" placeholder="请输入账号">
-				</div>
-				<div class="mui-input-row">
-					<label>密码</label>
-					<input id='password' type="password" class="mui-input-clear mui-input" placeholder="请输入密码">
-				</div>
-				<div class="mui-input-row">
-					<label>确认</label>
-					<input id='password_confirm' type="password" class="mui-input-clear mui-input" placeholder="请确认密码">
-				</div>
-				<div class="mui-input-row">
-					<label>邮箱</label>
-					<input id='email' type="email" class="mui-input-clear mui-input" placeholder="请输入邮箱">
-				</div>
-			</form>
-			<div class="mui-content-padded">
-				<button id='reg' class="mui-btn mui-btn-block mui-btn-primary">注册</button>
-			</div>
-			<div class="mui-content-padded">
-				<p id='result'></p>
-			</div>
+<div class="mui-content">
+	<form class="mui-input-group">
+		<div class="mui-input-row">
+			<label>账号</label>
+			<input id='username' type="text" class="mui-input-clear mui-input" placeholder="请输入账号">
 		</div>
+		<div class="mui-input-row">
+			<label>密码</label>
+			<input id='password' type="password" class="mui-input-clear mui-input" placeholder="请输入密码">
+		</div>
+		<div class="mui-input-row">
+			<label>确认</label>
+			<input id='password_confirm' type="password" class="mui-input-clear mui-input" placeholder="请确认密码">
+		</div>
+		<div class="mui-input-row">
+			<label>邮箱</label>
+			<input id='email' type="email" class="mui-input-clear mui-input" placeholder="请输入邮箱">
+		</div>
+	</form>
+	<div class="mui-content-padded">
+		<button id='reg' class="mui-btn mui-btn-block mui-btn-primary">注册</button>
+	</div>
+	<div class="mui-content-padded">
+		<p id='result'></p>
+	</div>
+</div>
 
-		<script src="js/md5.js"></script>
-		<script>
-			window.onload = function init() {
+<script src="js/md5.js"></script>
+<script>
+	window.onload = function init() {
 
-				var regButton = document.getElementById('reg');
-				var usernameBox = document.getElementById('username');
-				var passwordBox = document.getElementById('password');
-				var passwordConfirmBox = document.getElementById('password_confirm');
-				var emailBox = document.getElementById('email');
+		var regButton = document.getElementById('reg');
+		var usernameBox = document.getElementById('username');
+		var passwordBox = document.getElementById('password');
+		var passwordConfirmBox = document.getElementById('password_confirm');
+		var emailBox = document.getElementById('email');
 
-				usernameBox.value = 'chry';
-				passwordBox.value = 'chry';
-				passwordConfirmBox.value = 'chry';
-				emailBox.value = 'chry@hy.com';
+		usernameBox.value = 'chry';
+		passwordBox.value = 'chry';
+		passwordConfirmBox.value = 'chry';
+		emailBox.value = 'chry@hy.com';
 
-				regButton.addEventListener('click', async function(event) {
-					var regInfo = {
-						username: usernameBox.value,
-						password: passwordBox.value,
-						email: emailBox.value
-					};
+		regButton.addEventListener('click', async function(event) {
+			var regInfo = {
+				username: usernameBox.value,
+				password: passwordBox.value,
+				email: emailBox.value
+			};
 
-					//用户名以字母下划线开头，由数字和字母组成 2-16位
-					var usernameReg = /^[a-zA-z_]\w{1,15}$/;
-					if (!usernameReg.test(regInfo.username)) {
-						alert('用户名只能由数字/字母/下划线组成(2-16位, 不支持中文、不能以数字开头)。');
-						return;
-					}
-
-					//电子邮箱 前缀由字母、数字、下划线、短线“-”、点号“.”组成，后缀域名由字母、数字、短线“-”、域名后缀组成，
-					var emailReg = /^(\w-*\.*)+@(\w-?)+(\.\w{2,})+$/;
-					if (!emailReg.test(regInfo.email)) {
-						alert('电子邮箱格式非法!');
-						return;
-					}
-
-					//密码 由数字/字母/下划线组成 2-16位
-					var passwordReg = /^(\w){2,16}$/;
-					if (!passwordReg.test(regInfo.password)) {
-						alert('密码只能由数字/字母/下划线组成(2-16位)。');
-						return;
-					}
-
-					var passwordConfirm = passwordConfirmBox.value;
-					if (passwordConfirm != regInfo.password) {
-						alert('密码两次输入不一致');
-						return;
-					}
-
-					regInfo.password = md5(regInfo.password);
-					console.log(regInfo)
-
-
-					const url = '/api/register';
-					const options = {
-						headers: {
-							"content-type": "application/json; charset=UTF-8"
-						},
-						// 将请求javascript object转换为JSON字符串
-						body: JSON.stringify(regInfo),
-						method: "POST"
-					}
-
-					// 发出http post请求, 等待响应
-					let rsp = await fetch(url, options)
-					// 将响应作为JSON字符串反序列化为javascript object
-					let rspjson = await rsp.json()
-					console.log(rspjson)
-					document.getElementById('result').innerText = rspjson.message;
-
-					if (0 == rspjson.result) {
-						window.location.href = "login.html";
-					}
-				})
+			//用户名以字母下划线开头，由数字和字母组成 2-16位
+			var usernameReg = /^[a-zA-z_]\w{1,15}$/;
+			if (!usernameReg.test(regInfo.username)) {
+				alert('用户名只能由数字/字母/下划线组成(2-16位, 不支持中文、不能以数字开头)。');
+				return;
 			}
-		</script>
-	</body>
+
+			//电子邮箱 前缀由字母、数字、下划线、短线“-”、点号“.”组成，后缀域名由字母、数字、短线“-”、域名后缀组成，
+			var emailReg = /^(\w-*\.*)+@(\w-?)+(\.\w{2,})+$/;
+			if (!emailReg.test(regInfo.email)) {
+				alert('电子邮箱格式非法!');
+				return;
+			}
+
+			//密码 由数字/字母/下划线组成 2-16位
+			var passwordReg = /^(\w){2,16}$/;
+			if (!passwordReg.test(regInfo.password)) {
+				alert('密码只能由数字/字母/下划线组成(2-16位)。');
+				return;
+			}
+
+			var passwordConfirm = passwordConfirmBox.value;
+			if (passwordConfirm != regInfo.password) {
+				alert('密码两次输入不一致');
+				return;
+			}
+
+			regInfo.password = md5(regInfo.password);
+			console.log(regInfo)
+
+
+			const url = '/api/register';
+			const options = {
+				headers: {
+					"content-type": "application/json; charset=UTF-8"
+				},
+				// 将请求javascript object转换为JSON字符串
+				body: JSON.stringify(regInfo),
+				method: "POST"
+			}
+
+			// 发出http post请求, 等待响应
+			let rsp = await fetch(url, options)
+			// 将响应作为JSON字符串反序列化为javascript object
+			let rspjson = await rsp.json()
+			console.log(rspjson)
+			document.getElementById('result').innerText = rspjson.message;
+
+			if (0 == rspjson.result) {
+				window.location.href = "login.html";
+			}
+		})
+	}
+</script>
+</body>
 </html>
