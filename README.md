@@ -54,3 +54,9 @@ SET resource:lock "Redis Demo 3" EX 5
 PERSIST resource:lock
 
 ```
+
+# minio
+```
+docker启动minio, 默认账密adminminio/adminminio
+docker run -p 9000:9000 minio/minio server /data
+```

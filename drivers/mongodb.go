@@ -20,7 +20,7 @@ func connect() (*mongo.Client, error) {
 
 	// 连接到MongoDB
 	client, err := mongo.Connect(context.TODO(), clientOptions)
-	//defer client.Disconnect(context.TODO())
+	//defer MongoDbConn.Disconnect(context.TODO())
 	if err != nil {
 		log.Fatal(err)
 	}

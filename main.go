@@ -383,6 +383,13 @@ func main() {
 		return
 	}
 
+	// 初始化连接到MinioDB
+	err = drivers.MinioDBInit()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 	// 查询总数
 	name, size := models.NewMgo().Count()
 	log.Printf(" documents name: %+v documents size %d \n", name, size)
@@ -414,6 +421,8 @@ func main() {
 	http.HandleFunc("/api/login", login)   		// POST
 	http.HandleFunc("/api/logout", logout) 	// POST
 	http.HandleFunc("/api/register", register)	// POST
+	http.HandleFunc("/api/presignedUrl", presignedUrl)	// POST
+
 	http.HandleFunc("/api/echo", echo)             //WEBSOCKET
 
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等
