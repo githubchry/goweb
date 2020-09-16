@@ -8,6 +8,7 @@ require (
 	github.com/githubchry/gomdb v0.0.0-20200909053545-bd00a5f77dfe
 	github.com/go-ini/ini v1.61.0 // indirect
 	github.com/gomodule/redigo v1.8.2
+	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
