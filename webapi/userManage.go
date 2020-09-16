@@ -1,4 +1,4 @@
-package main
+package webapi
 
 import (
 	"encoding/json"
@@ -24,7 +24,7 @@ type UserRsp struct {
 
 // [golang jwt-go的使用](https://www.cnblogs.com/jianga/p/12487267.html)
 // [使用JWT进行接口认证](https://studygolang.com/articles/27242?fr=sidebar)
-func login(w http.ResponseWriter, r *http.Request) {
+func UserLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		return
 	}
@@ -69,7 +69,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func logout(w http.ResponseWriter, r *http.Request) {
+func UserLogout(w http.ResponseWriter, r *http.Request) {
 
 	// 从redis查询token
 	token, err := models.FindToken(r.Header.Get("Username"))
@@ -86,7 +86,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func register(w http.ResponseWriter, r *http.Request) {
+func UserRegister(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		return
 	}

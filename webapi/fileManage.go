@@ -1,4 +1,4 @@
-package main
+package webapi
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ type FileRsp struct {
 	Message string 	`json:"message"`
 }
 
-func presignedUrl(w http.ResponseWriter, r *http.Request) {
+func PresignedUrl(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		return
 	}
@@ -64,21 +64,4 @@ func presignedUrl(w http.ResponseWriter, r *http.Request) {
 	// 将结果结构体进行JSON编码，并写入响应
 	json.NewEncoder(w).Encode(fileRsp)
 
-}
-
-func download(w http.ResponseWriter, r *http.Request) {
-
-	// 从redis查询token
-	token, err := models.FindToken(r.Header.Get("Username"))
-	if err != nil {
-		return
-	}
-
-	if token != r.Header.Get("Token") {
-		return
-	}
-
-	models.DeleteToken(r.Header.Get("Username"))
-	log.Println("注销用户:", r.Header.Get("Username"))
-	return
 }
