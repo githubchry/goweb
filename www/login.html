@@ -74,7 +74,7 @@
 			console.log(rspjson)
 			document.getElementById('result').innerText = rspjson.message;
 
-			if (0 == rspjson.result) {
+			if (0 == rspjson.status) {
 				localStorage.setItem("Token", rspjson.token);
 				localStorage.setItem("Username", loginInfo.username);
 				window.location.href = "index.html";

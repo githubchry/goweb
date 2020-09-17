@@ -71,11 +71,18 @@ func main() {
 	route.HandleFunc("/api/login", 		webapi.UserLogin)   		// POST
 	route.HandleFunc("/api/logout", 		webapi.UserLogout) 	// POST
 	route.HandleFunc("/api/register", 		webapi.UserRegister)	// POST
+	route.HandleFunc("/api/userSetPhoto", 		webapi.UserSetPhoto)	// POST
+	route.HandleFunc("/api/userSetPassword", 		webapi.UserSetPassword)	// POST
+
+
 	route.HandleFunc("/api/presignedUrl", 	webapi.PresignedUrl)	// POST
 	route.HandleFunc("/api/echo", 			webapi.Echo)             //WEBSOCKET
 
+	route.HandleFunc("/user/{username}", 		webapi.UserPage)   		// POST
+	route.HandleFunc("/settings/{username}", 		webapi.UserSetting)   		// POST
+
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等
-	route.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./www/"))))
+	route.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("www/"))))
 
 	// 打印本机IP地址
 	printAddr()

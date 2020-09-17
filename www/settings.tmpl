@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Hello</title>
+</head>
+<body>
+<img src="{{.Photo}}" id="photo" width="200px" alt="用户头像" />
+</br>
+<input type="file" id="selector" accept="image/jpeg,image/png" />
+<button id='changePhoto' onclick="setPhoto();">修改图片</button>
+
+<div class="mui-content">
+    <form class="mui-input-group">
+        <div class="mui-input-row">
+            <label>旧密码</label>
+            <input id='oldpass' type="password" class="mui-input-clear mui-input" placeholder="请输入旧密码">
+        </div>
+        <div class="mui-input-row">
+            <label>新密码</label>
+            <input id='newpass' type="password" class="mui-input-clear mui-input" placeholder="请输入新密码">
+        </div>
+        <div class="mui-input-row">
+            <label>新确认</label>
+            <input id='newpass_confirm' type="password" class="mui-input-clear mui-input" placeholder="请确认新密码">
+        </div>
+    </form>
+    <div class="mui-content-padded">
+        <button id='commit' onclick="setPassword();" class="mui-btn mui-btn-block mui-btn-primary">修改密码</button>
+    </div>
+    <div class="mui-content-padded">
+        <p id='result'></p>
+    </div>
+</div>
+
+<div class="mui-content-padded">
+    <p id='result'></p>
+</div>
+
+<p>{{.Username}}</p>
+<p>email: {{.Email}}</p>
+
+<script src="../js/md5.js"></script>
+<!-- 内嵌的javascript代码 -->
+<script>
+    async function setPhoto() {
+        // 获取输入框内的值
+        var file = document.getElementById('selector').files[0];
+        if (!file) {
+            console.log("请选择文件...");
+            return
+        }
+
+        console.log(file);
+
+        var fileSuffix = file.name.split('.').pop().toLowerCase();
+        const data = {
+            cmd: 0,
+            type: "photo",
+            Suffix: fileSuffix
+        };
+
+        // 从服务器获取一个URL
+        var url = await retrieveNewURL(data);
+        if (url) {
+            // 将文件上传到url
+            uploadFile(file, url);
+        }
+    }
+
+    async function retrieveNewURL(data) {
+
+        const url = '/api/presignedUrl';
+        const options = {
+            headers: {
+                "content-type": "application/json; charset=UTF-8",
+                "Username":localStorage.getItem("Username"),
+                "Token": localStorage.getItem("Token")
+            },
+            // 将请求javascript object转换为JSON字符串
+            body: JSON.stringify(data),
+            method: "POST"
+        }
+        // 发出http post请求,等待响应
+        let response = await fetch(url, options)
+
+        // 将响应作为JSON字符串反序列化为javascript object
+        let rspjson = await response.json()
+        console.log(rspjson)
+
+        if (0 == rspjson.status) {
+            return rspjson.result;
+        } else {
+            document.getElementById('result').innerText = rspjson.message;
+            return null;
+        }
+    }
+
+    async function uploadFile(file, url) {
+        await fetch(url, {
+            method: 'PUT',
+            body: file
+        }).then(async () => {
+            //通知到后台修改图片
+
+            var fileSuffix = file.name.split('.').pop().toLowerCase();
+            var data = {
+                username: "{{.Username}}",
+                photo: "{{.Username}}."+fileSuffix,
+            };
+            const url = '/api/userSetPhoto';
+            const options = {
+                headers: {
+                    "content-type": "application/json; charset=UTF-8",
+                    "Username":localStorage.getItem("Username"),
+                    "Token": localStorage.getItem("Token")
+                },
+                // 将请求javascript object转换为JSON字符串
+                body: JSON.stringify(data),
+                method: "POST"
+            }
+            // 发出http post请求,等待响应
+            let response = await fetch(url, options);
+
+            // 将响应作为JSON字符串反序列化为javascript object
+            let rspjson = await response.json();
+            console.log(rspjson);
+            document.getElementById('result').innerText = rspjson.message;
+            if (0 == rspjson.status) {
+                document.getElementById('photo').src = rspjson.result;
+            }
+        }).catch((e) => {
+            console.error(e);
+        });
+    }
+
+    async function download() {
+        // 获取输入框内的值
+        var photo = document.getElementById('photo');
+
+        const data = {
+            cmd: 1,
+            type: "photo",
+            Suffix: "jpg"
+        };
+
+        // 从服务器获取一个URL
+        var url = await retrieveNewURL(data);
+        // 显示
+        photo.src = url;
+    }
+
+
+    async function setPassword() {
+        // 获取输入框内的值
+
+        var oldpassBox = document.getElementById('oldpass');
+        var newpassBox = document.getElementById('newpass');
+        var newpassConfirmBox = document.getElementById('newpass_confirm');
+
+        var info = {
+            username: "{{.Username}}",
+            oldpass: oldpassBox.value,
+            newpass: newpassBox.value,
+        };
+
+        //密码 由数字/字母/下划线组成 2-16位
+        var passwordReg = /^(\w){2,16}$/;
+        if (!passwordReg.test(info.oldpass)) {
+            alert('密码只能由数字/字母/下划线组成(2-16位)。');
+            return;
+        }
+
+        if (!passwordReg.test(info.newpass)) {
+            alert('密码只能由数字/字母/下划线组成(2-16位)。');
+            return;
+        }
+
+        if (info.oldpass == info.newpass) {
+            alert('旧密码不能与新密码相同!');
+            return;
+        }
+
+        var newpassConfirm = newpassConfirmBox.value;
+        if (newpassConfirm != info.newpass) {
+            alert('密码两次输入不一致');
+            return;
+        }
+
+        info.oldpass = md5(info.oldpass);
+        info.newpass = md5(info.newpass);
+        console.log(info)
+
+        const url = '/api/userSetPassword';
+        const options = {
+            headers: {
+                "content-type": "application/json; charset=UTF-8"
+            },
+            // 将请求javascript object转换为JSON字符串
+            body: JSON.stringify(info),
+            method: "POST"
+        }
+
+        // 发出http post请求, 等待响应
+        let rsp = await fetch(url, options)
+        // 将响应作为JSON字符串反序列化为javascript object
+        let rspjson = await rsp.json()
+        console.log(rspjson)
+        document.getElementById('result').innerText = rspjson.message;
+
+        if (0 == rspjson.status) {
+            localStorage.setItem("Token", rspjson.token);
+            // window.location.href = "index.html";
+        }
+    }
+
+</script>
+</body>
+</html>

@@ -1,6 +1,8 @@
 <html>
 <body>
-<button type="button" onclick="logout();">退出登录</button></br>
+<button type="button" onclick="logout();">退出登录</button>
+<button type="button" onclick="toSettingsPage();">用户设置</button>
+</br>
 操作数A: <input type="number" id="num1" /> </br>
 操作数B: <input type="number" id="num2" /> </br>
 <button type="button" onclick="addpost();"> 求和post </button>
@@ -13,92 +15,13 @@
 接收到消息:<p id="wsRecv"> </p></br>
 <hr>
 
-<input type="file" id="selector" accept="image/jpeg,image/png" /></br>
-<div id="status">No uploads</div></br>
-<button type="button" onclick="upload();"> 上传 </button>
-<button type="button" onclick="download();"> 下载 </button>
-<img src="" id="photo" width="200px" alt="用户头像" />
 <!-- 内嵌的javascript代码 -->
 <script>
 
-	async function upload() {
-		// 获取输入框内的值
-		var file = document.getElementById('selector').files[0];
-		if (!file) {
-            console.log("请选择文件...");
-		    return
-        }
-
-        console.log(file);
-
-        var fileSuffix = file.name.split('.').pop().toLowerCase();
-        const data = {
-            cmd: 0,
-            type: "photo",
-            Suffix: fileSuffix
-        };
-
-		// 从服务器获取一个URL
-		var url = await retrieveNewURL(data);
-		// 将文件上传到url
-        uploadFile(file, url);
-	}
-
-    async function download() {
-        // 获取输入框内的值
-        var photo = document.getElementById('photo');
-
-        const data = {
-            cmd: 1,
-            type: "photo",
-            Suffix: "jpg"
-        };
-
-        // 从服务器获取一个URL
-        var url = await retrieveNewURL(data);
-        // 显示
-        photo.src = url;
+    // 计算按钮的点击响应函数
+    function toSettingsPage() {
+        window.location.href = "settings/"+localStorage.getItem("Username");
     }
-
-    async function retrieveNewURL(data) {
-
-		const url = '/api/presignedUrl';
-		const options = {
-		    headers: {
-		        "content-type": "application/json; charset=UTF-8",
-		        "Username":localStorage.getItem("Username"),
-		        "Token": localStorage.getItem("Token")
-		    },
-            // 将请求javascript object转换为JSON字符串
-            body: JSON.stringify(data),
-		    method: "POST"
-		}
-		// 发出http post请求,等待响应
-		let response = await fetch(url, options)
-		
-		// 将响应作为JSON字符串反序列化为javascript object
-		let rspjson = await response.json()
-		console.log(rspjson)
-
-        return rspjson.result;
-    }
-
-    async function uploadFile(file, url) {
-        if (document.querySelector('#status').innerText === 'No uploads') {
-            document.querySelector('#status').innerHTML = '';
-        }
-
-        await fetch(url, {
-            method: 'PUT',
-            body: file
-        }).then(() => {
-            // If multiple files are uploaded, append upload status on the next line.
-            document.querySelector('#status').innerHTML += `<br>上传成功: ${file.name}`;
-        }).catch((e) => {
-            console.error(e);
-        });
-    }
-
 
     // 计算按钮的点击响应函数
     async function logout() {
