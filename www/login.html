@@ -17,6 +17,7 @@
 	</form>
 	<div class="mui-content-padded">
 		<button id='login' class="mui-btn mui-btn-block mui-btn-primary">登录</button>
+		<button id='register' class="mui-btn mui-btn-block mui-btn-primary">注册</button>
 	</div>
 	<div class="mui-content-padded">
 		<p id='result'></p>
@@ -27,6 +28,7 @@
 <script>
 	window.onload = function init() {
 
+		var registerButton = document.getElementById('register');
 		var loginButton = document.getElementById('login');
 		var usernameBox = document.getElementById('username');
 		var passwordBox = document.getElementById('password');
@@ -79,6 +81,11 @@
 				localStorage.setItem("Username", loginInfo.username);
 				window.location.href = "index.html";
 			}
+		})
+
+		registerButton.addEventListener('click', async function(event) {
+
+			window.location.href = "register.html";
 		})
 	}
 </script>
