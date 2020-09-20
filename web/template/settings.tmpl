@@ -61,7 +61,8 @@
         const data = {
             cmd: 0,
             type: "photo",
-            Suffix: fileSuffix
+            Suffix: fileSuffix,
+            username: "{{.Username}}"
         };
 
         // 从服务器获取一个URL
@@ -92,10 +93,10 @@
         let rspjson = await response.json()
         console.log(rspjson)
 
-        if (0 == rspjson.status) {
+        if (0 == rspjson.status.code) {
             return rspjson.result;
         } else {
-            document.getElementById('result').innerText = rspjson.message;
+            document.getElementById('result').innerText = rspjson.status.message;
             return null;
         }
     }
@@ -129,8 +130,8 @@
             // 将响应作为JSON字符串反序列化为javascript object
             let rspjson = await response.json();
             console.log(rspjson);
-            document.getElementById('result').innerText = rspjson.message;
-            if (0 == rspjson.status) {
+            document.getElementById('result').innerText = rspjson.status.message;
+            if (0 == rspjson.status.code) {
                 document.getElementById('photo').src = rspjson.result;
             }
         }).catch((e) => {
@@ -210,9 +211,9 @@
         // 将响应作为JSON字符串反序列化为javascript object
         let rspjson = await rsp.json()
         console.log(rspjson)
-        document.getElementById('result').innerText = rspjson.message;
+        document.getElementById('result').innerText = rspjson.status.message;
 
-        if (0 == rspjson.status) {
+        if (0 == rspjson.status.code) {
             localStorage.setItem("Token", rspjson.token);
             // window.location.href = "index.html";
         }

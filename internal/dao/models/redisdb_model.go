@@ -1,7 +1,7 @@
 package models
 
 import (
-	"github.com/githubchry/goweb/drivers"
+	"github.com/githubchry/goweb/internal/dao/drivers"
 	"github.com/gomodule/redigo/redis"
 	"log"
 )

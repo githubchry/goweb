@@ -1,12 +1,6 @@
 # goweb
-## 代码分层 CLD
-```
-Controller  对外接口 转换协议
-----------------------------
-Logic 业务
-----------------------------
-DAO  data access object
-```
+运行时确保工作目录为:goweb/cmd
+
 # docker
 ```
 从官方搜索minio镜像
@@ -150,5 +144,31 @@ docker for windows使用mongodb镜像，如果直接使用 -v 参数挂载磁盘
 解决:
 1，使用docker命令创建卷： docker volume create volume-mongodb
 2，然后挂载到上一步创建的卷：
-docker run -p 27017:27017 --name mongo-chry -d -v volume-mongodb:/data/db mongo
+docker run -p 27017:27017 --name mongo-chry -d -v volume-mongodb:/data/db mongo --auth
+
+进入mongo shell
+docker exec -it mongo-chry mongo
+
+创建超级用户
+use admin
+db.createUser({user:"admin", pwd:"admin",roles:["root"]})
+ 
+查看dbs列表
+> show dbs
+admin   0.000GB
+config  0.000GB
+local   0.000GB
+test    0.000GB
+
+切换到其中一个db
+> use test
+switched to db test
+为当前db创建用户
+db.createUser({user:"chry", pwd:"chry",roles:["readWrite"]})
+
+
+后面再进入就要验证用户
+db.auth('chry','chry')
+
+
 ```

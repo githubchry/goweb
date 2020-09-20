@@ -1,0 +1,27 @@
+{
+  "http": {
+    "addr": "127.0.0.1",
+    "port": 80
+  },
+  "minio": {
+    "addr": "127.0.0.1",
+    "port": 9000,
+    "username": "minioadmin",
+    "password": "minioadmin",
+    "ssl": false
+  },
+  "mongo": {
+    "addr": "127.0.0.1",
+    "port": 27017,
+    "username": "chry",
+    "password": "chry",
+    "dbname": "test",
+    "ssl": false
+  },
+  "redis": {
+    "addr": "127.0.0.1",
+    "port": 9000,
+    "network": "tcp",
+    "password": "chry"
+  }
+}

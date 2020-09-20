@@ -1,4 +1,4 @@
-package webapi
+package logics
 
 import (
 	"github.com/gorilla/websocket"

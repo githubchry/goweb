@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/githubchry/goweb/drivers"
+	"github.com/githubchry/goweb/internal/dao/drivers"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

@@ -74,11 +74,11 @@
         let rspjson = await response.json()
         console.log(rspjson)
 
-        if (0 == rspjson.status) {
+        if (0 == rspjson.status.code) {
             // 使用结果来更新对应元素的内容
             document.getElementById('result').innerText = rspjson.result
         } else {
-            alert(rspjson.message + "\n即将重新登录!");
+            alert(rspjson.status.message + "\n即将重新登录!");
             window.location.href = "login.html";
         }
 
@@ -106,11 +106,11 @@
         let rspjson = await response.json()
         console.log(rspjson)
 
-        if (0 == rspjson.status) {
+        if (0 == rspjson.status.code) {
             // 使用结果来更新对应元素的内容
             document.getElementById('result').innerText = rspjson.result
         } else {
-            alert(rspjson.message + "\n即将重新登录!");
+            alert(rspjson.status.message + "\n即将重新登录!");
             window.location.href = "login.html";
         }
     }

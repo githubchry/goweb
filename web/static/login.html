@@ -74,9 +74,9 @@
 			// 将响应作为JSON字符串反序列化为javascript object
 			let rspjson = await rsp.json()
 			console.log(rspjson)
-			document.getElementById('result').innerText = rspjson.message;
+			document.getElementById('result').innerText = rspjson.status.message;
 
-			if (0 == rspjson.status) {
+			if (0 == rspjson.status.code) {
 				localStorage.setItem("Token", rspjson.token);
 				localStorage.setItem("Username", loginInfo.username);
 				window.location.href = "index.html";

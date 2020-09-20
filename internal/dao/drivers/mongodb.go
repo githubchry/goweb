@@ -16,7 +16,7 @@ var MongoDbName string
 func connect() (*mongo.Client, error) {
 
 	// 设置客户端参数
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	clientOptions := options.Client().ApplyURI("mongodb://chry:chry@localhost:27017/?authSource=test")
 
 	// 连接到MongoDB
 	client, err := mongo.Connect(context.TODO(), clientOptions)
