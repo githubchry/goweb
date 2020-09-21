@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/githubchry/goweb/configs"
+	"github.com/githubchry/goweb/internal/dao/drivers"
 	"github.com/githubchry/goweb/internal/logics"
 	"github.com/githubchry/goweb/internal/middleware"
 	"github.com/githubchry/goweb/internal/protocol"
@@ -9,11 +11,44 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 )
 
-const port = "8080"
+var httpport = 80
 
-func printAddr(){
+func initdbcfg() {
+	// log打印设置: Lshortfile文件名+行号  LstdFlags日期加时间
+	log.SetFlags(log.Llongfile | log.LstdFlags)
+
+	appcfg, ok := configs.LoadConfig("../configs/config.json")
+	if !ok {
+		return
+	}
+	httpport = appcfg.HTTPCfg.Port
+
+	// 初始化连接到MongoDB
+	err := drivers.MongoDBInit(appcfg.MongoCfg)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	// 初始化连接到RedisDB
+	err = drivers.RedisDBInit(appcfg.RedisCfg)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	// 初始化连接到MinioDB
+	err = drivers.MinioDBInit(appcfg.MinioCfg)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+}
+
+func printAddr() {
 	// 获取并打印一下本地ip
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -25,36 +60,35 @@ func printAddr(){
 		// 检查ip地址判断是否回环地址
 		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
-				log.Printf("%s:%s\n", ipnet.IP.String(), port)
+				log.Printf("%s:%d\n", ipnet.IP.String(), httpport)
 			}
 		}
 	}
 }
 
-
 func main() {
-	// log打印设置: Lshortfile文件名+行号  LstdFlags日期加时间  LstdFlags
-	log.SetFlags(log.Llongfile | log.LstdFlags)
+
+	initdbcfg()
 
 	route := mux.NewRouter()
 	route.Use(middleware.ElapsedTime)
 	route.Use(middleware.ReadToken)
 
-	route.HandleFunc("/api/addpost", 			protocol.HTTPAddHandler)         //POST
-	route.HandleFunc("/api/addget", 			protocol.HTTPAddHandler)         //GET
+	route.HandleFunc("/api/addpost", protocol.HTTPAddHandler) //POST
+	route.HandleFunc("/api/addget", protocol.HTTPAddHandler)  //GET
 
-	route.HandleFunc("/api/login", 			protocol.HTTPUserLoginHandler)      // POST
-	route.HandleFunc("/api/logout", 			protocol.HTTPUserLogoutHandler)    // POST
-	route.HandleFunc("/api/register", 		protocol.HTTPUserRegisterHandler)           // POST
-	route.HandleFunc("/api/userSetPhoto", 	protocol.HTTPUserSetPhotoHandler)       // POST
-	route.HandleFunc("/api/userSetPassword", 	protocol.HTTPUserSetPasswordHandler) // POST
+	route.HandleFunc("/api/login", protocol.HTTPUserLoginHandler)                 // POST
+	route.HandleFunc("/api/logout", protocol.HTTPUserLogoutHandler)               // POST
+	route.HandleFunc("/api/register", protocol.HTTPUserRegisterHandler)           // POST
+	route.HandleFunc("/api/userSetPhoto", protocol.HTTPUserSetPhotoHandler)       // POST
+	route.HandleFunc("/api/userSetPassword", protocol.HTTPUserSetPasswordHandler) // POST
 
-	route.HandleFunc("/api/presignedUrl", 	protocol.HTTPPresignedUrlHandler) // POST
+	route.HandleFunc("/api/presignedUrl", protocol.HTTPPresignedUrlHandler) // POST
 
-	route.HandleFunc("/api/echo", 			logics.Echo)                 //WEBSOCKET
+	route.HandleFunc("/api/echo", logics.Echo) //WEBSOCKET
 
-	route.HandleFunc("/user/{username}",	 	view.HTTPUserPageHandler)        // GET
-	route.HandleFunc("/settings/{username}", 	view.HTTPUserSettingPageHandler) // GET
+	route.HandleFunc("/user/{username}", view.HTTPUserPageHandler)            // GET
+	route.HandleFunc("/settings/{username}", view.HTTPUserSettingPageHandler) // GET
 
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等
 	route.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("../web/static"))))
@@ -63,7 +97,7 @@ func main() {
 	printAddr()
 
 	// 启动http服务
-	err := http.ListenAndServe(":"+port, route)
+	err := http.ListenAndServe(":"+strconv.Itoa(httpport), route)
 	if err != nil {
 		log.Fatal(err)
 	}

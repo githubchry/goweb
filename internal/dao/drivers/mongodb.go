@@ -2,48 +2,39 @@ package drivers
 
 import (
 	"context"
-	"log"
-
+	"github.com/githubchry/goweb/configs"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"log"
+	"strconv"
 )
 
 var MongoDbConn *mongo.Client
 var MongoDbName string
 
+// 初始化
+func MongoDBInit(cfg configs.MongoCfg) error {
+	var err error
 
-// 连接
-func connect() (*mongo.Client, error) {
-
-	// 设置客户端参数
-	clientOptions := options.Client().ApplyURI("mongodb://chry:chry@localhost:27017/?authSource=test")
+	MongoDbName = "test"
+	// 设置客户端参数	"mongodb://chry:chry@localhost:27017/?authSource=test"
+	url := "mongodb://" + cfg.Username + ":" + cfg.Password + "@" + cfg.Addr + ":" + strconv.Itoa(cfg.Port) + "/?authSource=" + cfg.DBName
+	clientOptions := options.Client().ApplyURI(url)
 
 	// 连接到MongoDB
-	client, err := mongo.Connect(context.TODO(), clientOptions)
-	//defer MongoDbConn.Disconnect(context.TODO())
+	MongoDbConn, err = mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// 检查连接
-	err = client.Ping(context.TODO(), nil)
+	err = MongoDbConn.Ping(context.TODO(), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Println("Connected to MongoDB!")
-	return client, err
-}
-
-// 初始化
-func MongoDBInit() error{
-	var err error
-	MongoDbConn, err = connect()
-	if err != nil {
-		log.Fatal(err)
-	}
 	// 不要用 defer MongoDbConn.Disconnect(context.TODO())
-	MongoDbName = "test"
 	return err
 }
 

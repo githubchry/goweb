@@ -1,7 +1,7 @@
 {
   "http": {
     "addr": "127.0.0.1",
-    "port": 80
+    "port": 8080
   },
   "minio": {
     "addr": "127.0.0.1",
@@ -20,7 +20,7 @@
   },
   "redis": {
     "addr": "127.0.0.1",
-    "port": 9000,
+    "port": 6379,
     "network": "tcp",
     "password": "chry"
   }

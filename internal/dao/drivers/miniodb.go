@@ -1,21 +1,23 @@
 package drivers
 
 import (
+	"github.com/githubchry/goweb/configs"
 	"github.com/minio/minio-go"
 	"log"
+	"strconv"
 )
 
 var MinioDbConn *minio.Client
 var MinioDbName string
 
 // 初始化
-func MinioDBInit() error {
+func MinioDBInit(cfg configs.MinioCfg) error {
 	var err error
 	// Minio client需要以下4个参数来连接与Amazon S3兼容的对象存储。
-	endpoint := "127.0.0.1:9000"    // 对象存储服务的URL
-	accessKeyID := "minioadmin"     //Access key是唯一标识你的账户的用户ID。
-	secretAccessKey := "minioadmin" //Secret key是你账户的密码。
-	useSSL := false                 //true代表使用HTTPS
+	endpoint := cfg.Addr + ":" + strconv.Itoa(cfg.Port) // 对象存储服务的URL
+	accessKeyID := cfg.Username                         //Access key是唯一标识你的账户的用户ID。
+	secretAccessKey := cfg.Password                     //Secret key是你账户的密码。
+	useSSL := cfg.SSL                                   //true代表使用HTTPS
 
 	// 初使化 minio client对象。
 	MinioDbConn, err = minio.New(endpoint, accessKeyID, secretAccessKey, useSSL)
@@ -24,9 +26,8 @@ func MinioDBInit() error {
 	}
 	log.Println("Connected to MinioDB!")
 
-
 	location := "us-east-1"
-	bucketNameArr := [...] string {"music", "photo"}
+	bucketNameArr := [...]string{"music", "photo"}
 
 	//range遍历数组
 	for _, bucketName := range bucketNameArr {
