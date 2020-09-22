@@ -7,47 +7,32 @@ import (
 	"log"
 )
 
-type User struct {
-	Username	string 	`json:"username"`
-	Password	string	`json:"password"`
-	Email 		string	`json:"email"`
-	Photo 		string	`json:"photo"`
-}
 
-
-// UserRsp represents the result of an addition operation.
-type UserRsp struct {
-	Status 	Status	`json:"status"`			//应答状态
-	Result 	string	`json:"result"`
-	Token 	string 	`json:"token"`
-}
-
-type UserSetPasswordRsp  struct {
-	Username	string `json:"username"`
-	Oldpass		string `json:"oldpass"`
-	Newpass		string `json:"newpass"`
-}
 // [golang jwt-go的使用](https://www.cnblogs.com/jianga/p/12487267.html)
 // [使用JWT进行接口认证](https://studygolang.com/articles/27242?fr=sidebar)
-func UserLogin(user User) UserRsp {
+func UserLogin(req UserLoginReq) UserLoginRsp {
 	// 查询用户名是否已存在
 	var result User
-	models.NewMgo().FindOne("username", user.Username).Decode(&result)
+	models.NewMgo().FindOne("username", req.Username).Decode(&result)
 
-	var rsp UserRsp
-	if result.Password == user.Password {
-		rsp.Token = TokenGenerate(result.Username)
-		rsp.Status.Code = 0
-		rsp.Status.Message = "登录成功!"
-	} else if len(result.Username) <= 0 {
-		rsp.Status.Code = 1
-		rsp.Status.Message = "用户名不存在!"
-	} else {
-		rsp.Status.Code = 2
-		rsp.Status.Message = "密码错误!"
+	rsp := UserLoginRsp{
+		Code: 0,
+		Message: "",
 	}
 
-	log.Println(rsp.Status.Message)
+	if result.Password == req.Password {
+		rsp.Token = TokenGenerate(result.Username)
+		rsp.Message = "登录成功!"
+		rsp.Code = 0
+	} else if len(result.Username) <= 0 {
+		rsp.Code = 1
+		rsp.Message = "用户名不存在!"
+	} else {
+		rsp.Code = 2
+		rsp.Message = "密码错误!"
+	}
+
+	log.Println(rsp.Message)
 	return rsp
 }
 
@@ -68,91 +53,89 @@ func UserLogout(username string, token string) {
 	return
 }
 
-func UserRegister(user User) UserRsp {
+func UserRegister(req UserRegisterReq) Status {
 
 	// 打印请求数据
-	log.Println("post req: ", user.Username, user.Password, user.Email)
+	log.Println("post req: ", req.Username, req.Password, req.Email)
 
 	// 操作mongodb
 	// 返回结果
-	var rsp UserRsp
+	var rsp Status
 
 	// 删除
-	//deleteResult := models.NewMgo().DeleteMany("username", user.Username)
+	//deleteResult := models.NewMgo().DeleteMany("username", req.Username)
 	//fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult)
 
 	// 查询用户名是否已存在
 	var result User
-	models.NewMgo().FindOne("username", user.Username).Decode(&result)
+	models.NewMgo().FindOne("username", req.Username).Decode(&result)
 	if len(result.Username) > 0 {
 		// 用户名已注册
-		rsp.Status.Code = 1
-		rsp.Status.Message = "用户名已注册!"
+		rsp.Code = 1
+		rsp.Message = "用户名已注册!"
 	} else {
 		// 单个插入
-		InsertOneResult := models.NewMgo().InsertOne(user)
+		InsertOneResult := models.NewMgo().InsertOne(req)
 		log.Println("Inserted a single document: ", InsertOneResult)
 
-		rsp.Status.Code = 0
-		rsp.Status.Message = "注册成功!"
+		rsp.Code = 0
+		rsp.Message = "注册成功!"
 	}
 
-	log.Println(rsp.Status.Message)
+	log.Println(rsp.Message)
 	return rsp
 }
 
-func UserSetPhoto(user User) UserRsp {
+func UserSetPhoto(req UserSetPhotoReq) Status {
 
-	var userRsp UserRsp
+	var userRsp Status
 	// 查询用户名是否已存在
 	var result User
-	models.NewMgo().FindOne("username", user.Username).Decode(&result)
+	models.NewMgo().FindOne("username", req.Username).Decode(&result)
 	if len(result.Username) <= 0 {
 		// 用户名不存在
-		userRsp.Status.Code = 1
-		userRsp.Status.Message = "用户名不存在!"
+		userRsp.Code = 1
+		userRsp.Message = "用户名不存在!"
 		return userRsp
 	}
 
-	if result.Photo != user.Photo {
-		result.Photo = user.Photo
+	if result.Photo != req.Photo {
+		result.Photo = req.Photo
 		// 更新  $set更新  $inc增量更新
 		update := bson.D{
 			{"$set", bson.D{
-				{"photo", user.Photo},
+				{"photo", req.Photo},
 			}},
 		}
 		models.NewMgo().UpdateOne("username", result.Username, update);
 	}
 
-	userRsp.Status.Code = 0
-	userRsp.Status.Message = "修改图片成功!"
-	userRsp.Result = models.PreDownload("photo", user.Photo)
-
-	log.Println(userRsp.Status.Message)
+	userRsp.Code = 0
+	userRsp.Message = "修改图片成功!"
+	log.Println(userRsp.Message)
 
 	return userRsp
 }
 
-func UserSetPassword(info UserSetPasswordRsp) UserRsp {
+func UserSetPassword(req UserSetPasswordReq) Status {
 
-	log.Println(info)
+	log.Println(req)
 	// 查询用户名是否已存在
 	var result User
-	var userRsp UserRsp
-	models.NewMgo().FindOne("username", info.Username).Decode(&result)
+	var userRsp Status
+	models.NewMgo().FindOne("username", req.Username).Decode(&result)
 	if len(result.Username) <= 0 {
 		// 用户名不存在
-		userRsp.Status.Code = 1
-		userRsp.Status.Message = "用户名不存在!"
+		userRsp.Code = 1
+		userRsp.Message = "用户名不存在!"
 		return userRsp
 	}
 
-	if result.Password == info.Oldpass {
+	if result.Password == req.Oldpass {
 		// 更新  $set更新  $inc增量更新
 		update := bson.D{
 			{"$set", bson.D{
-				{"password", info.Newpass},
+				{"password", req.Newpass},
 			}},
 		}
 		models.NewMgo().UpdateOne("username", result.Username, update);
@@ -162,17 +145,14 @@ func UserSetPassword(info UserSetPasswordRsp) UserRsp {
 		log.Println("token", token)
 
 		models.DeleteToken(result.Username)
-		// 把token存到redis
-		models.InsertToken(result.Username, token, 120);
 
-		userRsp.Status.Code = 0
-		userRsp.Status.Message = "修改密码成功!"
-		userRsp.Token = token
+		userRsp.Code = 0
+		userRsp.Message = "修改密码成功!"
 	} else {
-		userRsp.Status.Code = 2
-		userRsp.Status.Message = "密码错误!"
+		userRsp.Code = 2
+		userRsp.Message = "密码错误!"
 	}
 
-	log.Println(userRsp.Status.Message)
+	log.Println(userRsp.Message)
 	return userRsp
 }

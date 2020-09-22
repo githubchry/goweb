@@ -30,21 +30,18 @@ func initdbcfg() {
 	err := drivers.MongoDBInit(appcfg.MongoCfg)
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 
 	// 初始化连接到RedisDB
 	err = drivers.RedisDBInit(appcfg.RedisCfg)
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 
 	// 初始化连接到MinioDB
 	err = drivers.MinioDBInit(appcfg.MinioCfg)
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 }
 
@@ -52,8 +49,7 @@ func printAddr() {
 	// 获取并打印一下本地ip
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		log.Println(err)
-		return
+		log.Fatal(err)
 	}
 
 	for _, address := range addrs {
@@ -72,7 +68,6 @@ func main() {
 
 	route := mux.NewRouter()
 	route.Use(middleware.ElapsedTime)
-	route.Use(middleware.ReadToken)
 
 	route.HandleFunc("/api/addpost", protocol.HTTPAddHandler) //POST
 	route.HandleFunc("/api/addget", protocol.HTTPAddHandler)  //GET
@@ -90,6 +85,7 @@ func main() {
 	route.HandleFunc("/user/{username}", view.HTTPUserPageHandler)            // GET
 	route.HandleFunc("/settings/{username}", view.HTTPUserSettingPageHandler) // GET
 
+	route.PathPrefix("/proto").Handler(http.StripPrefix("/proto", http.FileServer(http.Dir("../proto"))))
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等
 	route.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("../web/static"))))
 

@@ -3,18 +3,27 @@ package controller
 import (
 	"context"
 	"github.com/githubchry/goweb/internal/logics"
+	"log"
+	"regexp"
 )
 
-func UserLoginHandler(ctx context.Context, req *logics.User) logics.UserRsp {
-	var rsp logics.UserRsp
+func UserLoginHandler(ctx context.Context, req *logics.UserLoginReq) logics.UserLoginRsp {
+	var rsp logics.UserLoginRsp
 	// 无需校验token
 
 	// 校验参数
-	if req.Username == "" {
+	//用户名以字母下划线开头，由数字和字母组成 2-16位
+	match, _ := regexp.MatchString("^[a-zA-z_]\\w{1,15}$", req.Username)
+	if match == false {
+		log.Println(match)
+		rsp.Code = 1;
+		rsp.Message = "用户名格式错误";
 		return rsp
 	}
 
-	if req.Password == "" {
+	if len(req.Password) != 32 {
+		rsp.Code = 2;
+		rsp.Message = "密码md5异常错误";
 		return rsp
 	}
 
@@ -37,20 +46,30 @@ func UserLogoutHandler(ctx context.Context) {
 	logics.UserLogout(username, token)
 }
 
-func UserRegisterHandler(ctx context.Context, req *logics.User) logics.UserRsp {
-	var rsp logics.UserRsp
+func UserRegisterHandler(ctx context.Context, req *logics.UserRegisterReq) logics.Status {
+	var rsp logics.Status
 	// 无需校验token
 
 	// 校验参数
-	if req.Username == "" {
+	//用户名以字母下划线开头，由数字和字母组成 2-16位
+	match, _ := regexp.MatchString("^[a-zA-z_]\\w{1,15}$", req.Username)
+	if match == false {
+		rsp.Code = 1;
+		rsp.Message = "用户名格式错误";
 		return rsp
 	}
 
-	if req.Email == "" {
+	//电子邮箱 前缀由字母、数字、下划线、短线“-”、点号“.”组成，后缀域名由字母、数字、短线“-”、域名后缀组成
+	match, _ = regexp.MatchString("^(\\w-*\\.*)+@(\\w-?)+(\\.\\w{2,})+$;", req.Email)
+	if match == false {
+		rsp.Code = 1;
+		rsp.Message = "电子邮箱格式错误";
 		return rsp
 	}
 
-	if req.Password == "" {
+	if len(req.Password) != 32 {
+		rsp.Code = 1;
+		rsp.Message = "密码md5格式错误";
 		return rsp
 	}
 
@@ -58,16 +77,24 @@ func UserRegisterHandler(ctx context.Context, req *logics.User) logics.UserRsp {
 	return logics.UserRegister(*req)
 }
 
-func UserSetPhotoHandler(ctx context.Context, req *logics.User) logics.UserRsp {
-	var rsp logics.UserRsp
+func UserSetPhotoHandler(ctx context.Context, req *logics.UserSetPhotoReq) logics.Status {
+	var rsp logics.Status
 	// 无需校验token
 
 	// 校验参数
-	if req.Username == "" {
+	//用户名以字母下划线开头，由数字和字母组成 2-16位
+	match, _ := regexp.MatchString("^[a-zA-z_]\\w{1,15}$", req.Username)
+	if match == false {
+		rsp.Code = 1;
+		rsp.Message = "用户名格式错误";
 		return rsp
 	}
 
-	if req.Photo == "" {
+	// 头像图片以jpg|png结尾
+	match, _ = regexp.MatchString(".*(.jpg|.png)$", req.Photo)
+	if match == false {
+		rsp.Code = 2;
+		rsp.Message = "图片格式错误";
 		return rsp
 	}
 
@@ -75,22 +102,25 @@ func UserSetPhotoHandler(ctx context.Context, req *logics.User) logics.UserRsp {
 	return logics.UserSetPhoto(*req)
 }
 
-func UserSetPasswordHandler(ctx context.Context, req *logics.UserSetPasswordRsp) logics.UserRsp {
-	var rsp logics.UserRsp
+func UserSetPasswordHandler(ctx context.Context, req *logics.UserSetPasswordReq) logics.Status {
+	var rsp logics.Status
 	// 无需校验token
 
 	// 校验参数
-	if req.Username == "" {
+	//用户名以字母下划线开头，由数字和字母组成 2-16位
+	match, _ := regexp.MatchString("^[a-zA-z_]\\w{1,15}$", req.Username)
+	if match == false {
+		rsp.Code = 1;
+		rsp.Message = "用户名格式错误";
 		return rsp
 	}
 
-	if req.Newpass == "" {
+	if len(req.Newpass) != 32 || len(req.Oldpass) != 32 {
+		rsp.Code = 2;
+		rsp.Message = "密码md5异常错误";
 		return rsp
 	}
 
-	if req.Oldpass == "" {
-		return rsp
-	}
 	// 调用真正的api
 	return logics.UserSetPassword(*req)
 }

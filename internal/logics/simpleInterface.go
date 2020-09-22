@@ -2,8 +2,8 @@ package logics
 
 // AddReq represents the parameter of an addition operation.
 type AddReq struct {
-	OperandA int
-	OperandB int
+	OperandA int	`json:"OperandA" validate:"required||integer=-65535, 65535"`
+	OperandB int	`json:"OperandB"`
 }
 
 // AddRsp represents the result of an addition operation.

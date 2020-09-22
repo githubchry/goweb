@@ -25,6 +25,7 @@
 </div>
 
 <script src="js/md5.js"></script>
+<script src="js/protobuf.js"></script>
 <script>
 	window.onload = function init() {
 
@@ -57,32 +58,64 @@
 			}
 
 			loginInfo.password = md5(loginInfo.password);
-			console.log(loginInfo)
 
-			const url = '/api/login';
-			const options = {
-				headers: {
-					"content-type": "application/json; charset=UTF-8"
-				},
-				// 将请求javascript object转换为JSON字符串
-				body: JSON.stringify(loginInfo),
-				method: "POST"
-			}
+            protobuf.load("proto/user.proto", function (err, root) {
+                if (err)
+                    throw err;
 
-			// 发出http post请求, 等待响应
-			let rsp = await fetch(url, options)
-			// 将响应作为JSON字符串反序列化为javascript object
-			let rspjson = await rsp.json()
-			console.log(rspjson)
-			document.getElementById('result').innerText = rspjson.status.message;
+                console.log(loginInfo)
+                // 获取消息类型Obtain a message type
+                var pbreq = root.lookupType("logics.UserLoginReq");
+                // 有效载荷Exemplary payload
+                var payload = {
+                    username: loginInfo.username,
+                    password: loginInfo.password
+                };
+				// 验证有效负载(如可能不完整或无效 比如password, proto定义是string类型, 如果payload设为int的数值,就会返回错误)
+                var errMsg = pbreq.verify(payload);
+                if (errMsg){
+                    console.log(errMsg);
+                    throw Error(errMsg);
+                }
 
-			if (0 == rspjson.status.code) {
-				localStorage.setItem("Token", rspjson.token);
-				localStorage.setItem("Username", loginInfo.username);
-				window.location.href = "index.html";
-			}
+                // 根据payload创建消息体
+                var message = pbreq.create(payload); // or use .fromObject if conversion is necessary
+                console.log(message);
+
+                // Encode a message to an Uint8Array (browser) or Buffer (node)
+                var buffer = pbreq.encode(message).finish();
+                const url = '/api/login';
+                const options = {
+                    body: buffer,
+                    method: "POST"
+                }
+                console.log(buffer);
+                // 发出http post请求, 等待响应
+                let rsp = fetch(url, options).then(function (response) {
+
+                    response.arrayBuffer().then(function (buffer) {
+                        console.log(data);
+                        var data = new Uint8Array(buffer)
+                        // 获取消息类型Obtain a message type
+                        var pbrsp = root.lookupType("logics.UserLoginRsp");
+                        var msg = pbrsp.decode(data)
+                        console.log(msg);
+                        console.log(msg.code);
+
+                        document.getElementById('result').innerText = msg.message;
+
+                        if (0 == msg.code) {
+                            localStorage.setItem("Token", msg.token);
+                            localStorage.setItem("Username", loginInfo.username);
+                            window.location.href = "index.html";
+                        }
+
+                    })
+                });
+
+
+            });
 		})
-
 		registerButton.addEventListener('click', async function(event) {
 
 			window.location.href = "register.html";

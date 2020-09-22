@@ -1,0 +1,99 @@
+syntax = "proto3";      //指明使用proto3语法,否则编译器默认使用proto2的语法
+package logics;       //包声明符, 相当于命名空间，产生的类会被包装在C++命名空间中
+option go_package = "../internal/logics";
+//proto3取消了optional和required限定修饰符，只能使用singular(默认)和repeated
+//singular：该字段可以有0个或者1个（但是不能超过1个）。
+//repeated：该字段可以重复任意多次（包括0次）。重复的值的顺序会被保留。
+
+//命名规范
+//message和enum命名采用驼峰命名方式，大写开头 比如Packet和PacketType
+//字段命名采用小写字母加下划线分隔方式 比如packet和packet_type
+
+/*
+type UserLoginReq struct {
+	Username	string 	`json:"username" validate:"len>=2,len<=16"`
+	Password	string	`json:"password" validate:"len=32"`
+}
+
+type UserRegisterReq struct {
+	Username	string 	`json:"username" validate:"len>=2,len<=16"`
+	Password	string	`json:"password" validate:"len=32"`
+	Email 		string	`json:"email" validate:"email"`
+}
+
+type UserSetPhotoReq struct {
+	Username	string 	`json:"username" validate:"len>=2|len<=16"`
+	Photo 		string	`json:"photo" validate:"endswith=.jpg|endswith=.png"`
+}
+
+type UserSetPasswordReq  struct {
+	Username	string `json:"username" validate:"len>=2,len<=16"`
+	Oldpass		string `json:"oldpass" validate:"len=32"`
+	Newpass		string `json:"newpass" validate:"len=32,nefield=Oldpass"`
+}
+
+// UserRsp represents the result of an addition operation.
+type UserRsp struct {
+	Status 	Status	`json:"status"`			//应答状态
+	Result 	string	`json:"result"`
+	Token 	string 	`json:"token"`
+}
+
+type User struct {
+	Username	string 	`json:"username"`
+	Password	string	`json:"password"`
+	Email 		string	`json:"email"`
+	Photo 		string	`json:"photo"`
+}
+
+*/
+
+message Status {
+  int32 code = 1;
+  string message = 2;
+}
+
+message User {
+  string username = 1;
+  string password = 2;
+  string email = 3;
+  string photo = 4;
+}
+
+message UserLoginReq {
+  string username = 1;
+  string password = 2;
+}
+
+message UserLoginRsp {
+  int32 code = 1;
+  string message = 2;
+  string token = 3;
+}
+
+// 返回Status
+message UserLogoutReq {
+  string username = 1;
+  string token = 2;
+}
+
+// 返回Status
+message UserRegisterReq {
+  string username = 1;
+  string password = 2;
+  string email = 3;
+}
+
+// 返回Status
+message UserSetPhotoReq {
+  string username = 1;
+  string token = 2;
+  string photo = 3;
+}
+
+// 返回Status
+message UserSetPasswordReq {
+  string username = 1;
+  string oldpass = 2;
+  string newpass = 3;
+}
