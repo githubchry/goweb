@@ -20,7 +20,6 @@ func HTTPUserSettingPageHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "用户不存在!\n")
 		return
 	}
-	log.Println(result)
 	// 解析指定文件生成模板对象
 	tmpl, err := template.ParseFiles("../web/template/settings.tmpl")
 	if err != nil {

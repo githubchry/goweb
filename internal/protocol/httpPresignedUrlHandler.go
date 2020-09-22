@@ -1,28 +1,27 @@
 package protocol
 
 import (
-	"encoding/json"
 	"github.com/githubchry/goweb/internal/controller"
 	"github.com/githubchry/goweb/internal/logics"
+	"github.com/golang/protobuf/proto"
+	"io/ioutil"
 	"log"
 	"net/http"
 )
 
 func HTTPPresignedUrlHandler(w http.ResponseWriter, r *http.Request) {
 
-	var req logics.FileReq
+	req := &logics.FileReq{}
 
-	if r.Method == "POST" {
-		// 将请求的body作为JSON字符串解码，并存入AddReq结构体内
-		json.NewDecoder(r.Body).Decode(&req)
-	} else {
+	//把protobuf二进制数据转成logics.UserLoginReq结构体
+	data, _ := ioutil.ReadAll(r.Body)
+	if err := proto.Unmarshal(data, req); err != nil {
+		log.Println("Failed to parse protobuf:", err)
 		return
 	}
 
-	log.Println("Add req: ", r.Method, req)
-	rsp := controller.PresignedUrlHandler(r.Context(), &req)
-	log.Println("Add rsp: ", rsp)
-
-	json.NewEncoder(w).Encode(rsp)
+	rsp := controller.PresignedUrlHandler(r.Context(), req)
+	data, _ = proto.Marshal(&rsp)
+	w.Write(data)
 }
 

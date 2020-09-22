@@ -1,9 +1,10 @@
 package protocol
 
 import (
-	"encoding/json"
 	"github.com/githubchry/goweb/internal/controller"
 	"github.com/githubchry/goweb/internal/logics"
+	"github.com/golang/protobuf/proto"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -12,22 +13,31 @@ import (
 
 func HTTPAddHandler(w http.ResponseWriter, r *http.Request) {
 
-	var req logics.AddReq
+	req := &logics.AddReq{}
 	if r.Method == "POST" {
-		// 将请求的body作为JSON字符串解码，并存入AddReq结构体内
-		json.NewDecoder(r.Body).Decode(&req)
+		//把protobuf二进制数据转成logics.UserLoginReq结构体
+		data, _ := ioutil.ReadAll(r.Body)
+		if err := proto.Unmarshal(data, req); err != nil {
+			log.Println("Failed to parse protobuf:", err)
+			return
+		}
 	} else if r.Method == "GET" {
+
+		req.Username = r.Header.Get("Username")
+		req.Token = r.Header.Get("Token")
+
 		values := r.URL.Query()
-		req.OperandA, _ = strconv.Atoi(values.Get("OperandA"))
-		req.OperandB, _ = strconv.Atoi(values.Get("OperandB"))
-	} else {
-		return
+		a, _ := strconv.Atoi(values.Get("OperandA"))
+		b, _ := strconv.Atoi(values.Get("OperandB"))
+
+		req.Operand = []int32{
+			int32(a),
+			int32(b),
+		}
 	}
 
-	log.Println("Add req: ", r.Method, req.OperandA, req.OperandB)
-	rsp := controller.AddHandler(r.Context(), &req)
-	log.Println("Add rsp: ", rsp)
-
-	json.NewEncoder(w).Encode(rsp)
+	rsp := controller.AddHandler(r.Context(), req)
+	data, _ := proto.Marshal(&rsp)
+	w.Write(data)
 }
 

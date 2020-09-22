@@ -7,17 +7,20 @@ import (
 
 func AddHandler(ctx context.Context, req *logics.AddReq) logics.AddRsp {
 	// 校验token
-	username, _ := ctx.Value("username").(string)
-	token, _ := ctx.Value("token").(string)
-	if logics.TokenCheck(username, token) != 0 {
-		var rsp logics.AddRsp
-		rsp.Status.Code = -2
-		rsp.Status.Message = "非法访问: Token失效!"
-		return rsp
+	if logics.TokenCheck(req.Username, req.Token) != 0 {
+		return logics.AddRsp{
+			Code: -1,
+			Message : "非法访问: Token失效!",
+		}
 	}
 
-	// 校验参数 < int32
-
+	// 校验参数
+	if len(req.Operand) <= 1 {
+		return logics.AddRsp{
+			Code: -2,
+			Message : "参数异常: 至少输入两个数!",
+		}
+	}
 
 	// 调用真正的api
 	return logics.Add(req)

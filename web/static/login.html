@@ -60,47 +60,29 @@
 			loginInfo.password = md5(loginInfo.password);
 
             protobuf.load("proto/user.proto", function (err, root) {
-                if (err)
-                    throw err;
+                if (err) throw err;
 
                 console.log(loginInfo)
                 // 获取消息类型Obtain a message type
                 var pbreq = root.lookupType("logics.UserLoginReq");
-                // 有效载荷Exemplary payload
-                var payload = {
-                    username: loginInfo.username,
-                    password: loginInfo.password
-                };
 				// 验证有效负载(如可能不完整或无效 比如password, proto定义是string类型, 如果payload设为int的数值,就会返回错误)
-                var errMsg = pbreq.verify(payload);
-                if (errMsg){
-                    console.log(errMsg);
-                    throw Error(errMsg);
-                }
+                if (pbreq.verify(loginInfo)) throw Error(errMsg);
 
                 // 根据payload创建消息体
-                var message = pbreq.create(payload); // or use .fromObject if conversion is necessary
+                var message = pbreq.create(loginInfo);
                 console.log(message);
 
                 // Encode a message to an Uint8Array (browser) or Buffer (node)
                 var buffer = pbreq.encode(message).finish();
                 const url = '/api/login';
-                const options = {
-                    body: buffer,
-                    method: "POST"
-                }
-                console.log(buffer);
-                // 发出http post请求, 等待响应
-                let rsp = fetch(url, options).then(function (response) {
+                const options = { body: buffer, method: "POST" };
 
+                // 发出http post请求, 等待响应
+                fetch(url, options).then(function (response) {
                     response.arrayBuffer().then(function (buffer) {
-                        console.log(data);
-                        var data = new Uint8Array(buffer)
                         // 获取消息类型Obtain a message type
-                        var pbrsp = root.lookupType("logics.UserLoginRsp");
-                        var msg = pbrsp.decode(data)
+                        var msg = root.lookupType("logics.UserLoginRsp").decode(new Uint8Array(buffer))
                         console.log(msg);
-                        console.log(msg.code);
 
                         document.getElementById('result').innerText = msg.message;
 
@@ -109,11 +91,8 @@
                             localStorage.setItem("Username", loginInfo.username);
                             window.location.href = "index.html";
                         }
-
                     })
                 });
-
-
             });
 		})
 		registerButton.addEventListener('click', async function(event) {

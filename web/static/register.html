@@ -33,6 +33,7 @@
 </div>
 
 <script src="js/md5.js"></script>
+<script src="js/protobuf.js"></script>
 <script>
 	window.onload = function init() {
 
@@ -83,28 +84,34 @@
 
 			regInfo.password = md5(regInfo.password);
 			console.log(regInfo)
+            protobuf.load("proto/user.proto", async function (err, root) {
+                if (err) throw err;
+                // 获取消息类型Obtain a message type
+                var pbreq = root.lookupType("logics.UserRegisterReq");
+				// 验证有效负载(如可能不完整或无效 比如password, proto定义是string类型, 如果payload设为int的数值,就会返回错误)
+                if (pbreq.verify(regInfo)) throw Error(errMsg);
 
+                // 根据payload创建消息体
+                var reqmsg = pbreq.create(regInfo);
+                console.log(reqmsg);
 
-			const url = '/api/register';
-			const options = {
-				headers: {
-					"content-type": "application/json; charset=UTF-8"
-				},
-				// 将请求javascript object转换为JSON字符串
-				body: JSON.stringify(regInfo),
-				method: "POST"
-			}
+                // Encode a message to an Uint8Array (browser) or Buffer (node)
+                var buffer = pbreq.encode(reqmsg).finish();
+                const url = '/api/register';
+                const options = { body: buffer, method: "POST" };
 
-			// 发出http post请求, 等待响应
-			let rsp = await fetch(url, options)
-			// 将响应作为JSON字符串反序列化为javascript object
-			let rspjson = await rsp.json()
-			console.log(rspjson)
-			document.getElementById('result').innerText = rspjson.status.message;
+                // 发出http post请求, 等待响应
+                let rsp     = await fetch(url, options);
+                var buffer  = await rsp.arrayBuffer();
+                var rspmsg = root.lookupType("logics.UserLoginRsp").decode(new Uint8Array(buffer))
+                console.log(rspmsg);
 
-			if (0 == rspjson.status.code) {
-				window.location.href = "login.html";
-			}
+                document.getElementById('result').innerText = rspmsg.message;
+
+                if (0 == rspmsg.code) {
+                    window.location.href = "login.html";
+                }
+            });
 		})
 	}
 </script>

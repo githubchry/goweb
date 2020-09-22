@@ -45,9 +45,10 @@
 <p>email: {{.Email}}</p>
 
 <script src="../js/md5.js"></script>
+<script src="../js/protobuf.js"></script>
 <!-- 内嵌的javascript代码 -->
 <script>
-    async function setPhoto() {
+    function setPhoto() {
         // 获取输入框内的值
         var file = document.getElementById('selector').files[0];
         if (!file) {
@@ -57,104 +58,96 @@
 
         console.log(file);
 
-        var fileSuffix = file.name.split('.').pop().toLowerCase();
         const data = {
             cmd: 0,
+            username: "{{.Username}}",
+            token: localStorage.getItem("Token"),
             type: "photo",
-            Suffix: fileSuffix,
-            username: "{{.Username}}"
+            filename: file.name,
         };
 
-        // 从服务器获取一个URL
-        var url = await retrieveNewURL(data);
-        if (url) {
-            // 将文件上传到url
-            uploadFile(file, url);
-        }
+        protobuf.load("../proto/file.proto", function (err, root) {
+            if (err) throw err;
+
+            var pbreq = root.lookupType("logics.FileReq");
+            if (pbreq.verify(data)) throw Error(errMsg);
+
+            var reqmsg = pbreq.create(data);
+            console.log(reqmsg);
+
+            // Encode a message to an Uint8Array (browser) or Buffer (node)
+            var buffer = pbreq.encode(reqmsg).finish();
+            const url = '/api/presignedUrl';
+            const options = { body: buffer, method: "POST" };
+
+            // 发出http post请求, 等待响应
+            fetch(url, options).then((response)=>{
+                console.log(response);
+                response.arrayBuffer().then((buffer)=>{
+                    console.log(buffer);
+                    var rspmsg = root.lookupType("logics.FileRsp").decode(new Uint8Array(buffer))
+                    console.log(rspmsg);
+                    document.getElementById('result').innerText = rspmsg.message;
+                    if (0 == rspmsg.code) {
+                        // 将文件上传到url
+                        console.log(file);
+                        uploadFile(file, rspmsg.url);
+                    }
+                })
+            });
+        });
     }
 
-    async function retrieveNewURL(data) {
 
-        const url = '/api/presignedUrl';
-        const options = {
-            headers: {
-                "content-type": "application/json; charset=UTF-8",
-                "Username":localStorage.getItem("Username"),
-                "Token": localStorage.getItem("Token")
-            },
-            // 将请求javascript object转换为JSON字符串
-            body: JSON.stringify(data),
-            method: "POST"
-        }
-        // 发出http post请求,等待响应
-        let response = await fetch(url, options)
-
-        // 将响应作为JSON字符串反序列化为javascript object
-        let rspjson = await response.json()
-        console.log(rspjson)
-
-        if (0 == rspjson.status.code) {
-            return rspjson.result;
-        } else {
-            document.getElementById('result').innerText = rspjson.status.message;
-            return null;
-        }
-    }
-
-    async function uploadFile(file, url) {
-        await fetch(url, {
+    function uploadFile(file, url) {
+        fetch(url, {
             method: 'PUT',
             body: file
-        }).then(async () => {
+        }).then(() => {
             //通知到后台修改图片
-
             var fileSuffix = file.name.split('.').pop().toLowerCase();
             var data = {
                 username: "{{.Username}}",
                 photo: "{{.Username}}."+fileSuffix,
             };
-            const url = '/api/userSetPhoto';
-            const options = {
-                headers: {
-                    "content-type": "application/json; charset=UTF-8",
-                    "Username":localStorage.getItem("Username"),
-                    "Token": localStorage.getItem("Token")
-                },
-                // 将请求javascript object转换为JSON字符串
-                body: JSON.stringify(data),
-                method: "POST"
-            }
-            // 发出http post请求,等待响应
-            let response = await fetch(url, options);
 
-            // 将响应作为JSON字符串反序列化为javascript object
-            let rspjson = await response.json();
-            console.log(rspjson);
-            document.getElementById('result').innerText = rspjson.status.message;
-            if (0 == rspjson.status.code) {
-                document.getElementById('photo').src = rspjson.result;
-            }
+            protobuf.load("../proto/user.proto", function (err, root) {
+                if (err) throw err;
+
+                var pbreq = root.lookupType("logics.UserSetPhotoReq");
+                if (pbreq.verify(data)) throw Error(errMsg);
+
+                var reqmsg = pbreq.create(data);
+                console.log(reqmsg);
+
+                // Encode a message to an Uint8Array (browser) or Buffer (node)
+                var buffer = pbreq.encode(reqmsg).finish();
+                const url = '/api/userSetPhoto';
+                const options = { body: buffer, method: "POST" };
+
+                // 发出http post请求, 等待响应
+                fetch(url, options).then((response)=>{
+                    response.arrayBuffer().then((buffer)=>{
+                        var rspmsg = root.lookupType("logics.Status").decode(new Uint8Array(buffer));
+                        console.log(rspmsg);
+                        document.getElementById('result').innerText = rspmsg.message;
+                        if (rspmsg.code == 0) {
+                            var photo = document.getElementById('photo');
+                            var reader = new FileReader();
+                            reader.readAsDataURL(file);
+                            reader.onload = function() {
+                                // 将读取的结果显示在页面中
+                                photo.src = reader.result;
+                            }
+
+                        }
+                    })
+                });
+            });
         }).catch((e) => {
             console.error(e);
         });
     }
-
-    async function download() {
-        // 获取输入框内的值
-        var photo = document.getElementById('photo');
-
-        const data = {
-            cmd: 1,
-            type: "photo",
-            Suffix: "jpg"
-        };
-
-        // 从服务器获取一个URL
-        var url = await retrieveNewURL(data);
-        // 显示
-        photo.src = url;
-    }
-
 
     async function setPassword() {
         // 获取输入框内的值

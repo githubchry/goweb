@@ -16,6 +16,7 @@
 <hr>
 
 <!-- 内嵌的javascript代码 -->
+<script src="js/protobuf.js"></script>
 <script>
 
     // 计算按钮的点击响应函数
@@ -24,67 +25,85 @@
     }
 
     // 计算按钮的点击响应函数
-    async function logout() {
+    function logout() {
 
-        const url = '/api/logout';
-        const options = {
-            headers: {
-                "content-type": "application/json; charset=UTF-8",
-                "Username":localStorage.getItem("Username"),
-                "Token": localStorage.getItem("Token")
-            },
-            method: "POST"
-        }
+        var info = {
+			username: localStorage.getItem("Username"),
+	        token:localStorage.getItem("Token")
+        };
 
-        // 发出http post请求, 等待响应
-        let rsp = await fetch(url, options)
+        protobuf.load("proto/user.proto", function (err, root) {
+            if (err) throw err;
 
-        localStorage.setItem("Token", "");
-        localStorage.setItem("Username", "");
-        window.location.href = "login.html";
+            console.log(info)
+            // 获取消息类型Obtain a message type
+            var pbreq = root.lookupType("logics.UserLogoutReq");
+            // 验证有效负载(如可能不完整或无效 比如password, proto定义是string类型, 如果payload设为int的数值,就会返回错误)
+            if (pbreq.verify(info)) throw Error(errMsg);
 
+            // 根据payload创建消息体
+            var message = pbreq.create(info);
+            console.log(message);
+
+            // Encode a message to an Uint8Array (browser) or Buffer (node)
+            var buffer = pbreq.encode(message).finish();
+            const url = '/api/logout';
+            const options = { body: buffer, method: "POST" };
+            // 发出http post请求, 等待响应
+            fetch(url, options).then(function (response) {
+                window.location.href = "login.html";
+            });
+        });
     }
 
     // 计算按钮的点击响应函数
-    async function addpost() {
+    function addpost() {
         // 获取输入框内的值
         var num1 = document.getElementById('num1').value;
         var num2 = document.getElementById('num2').value;
-        const url = '/api/addpost';
         const data = {
-            OperandA: (Number)(num1),
-            OperandB: (Number)(num2)
+            username: localStorage.getItem("Username"),
+            token:localStorage.getItem("Token"),
+            operand: [(Number)(num1), (Number)(num2)]
         };
-        console.log(data)
-        console.log(localStorage.getItem("Token"))
-        const options = {
-            headers: {
-                "content-type": "application/json; charset=UTF-8",
-                "Username":localStorage.getItem("Username"),
-                "Token": localStorage.getItem("Token")
-            },
-            // 将请求javascript object转换为JSON字符串
-            body: JSON.stringify(data),
-            method: "POST"
-        }
-        // 发出http post请求
-        let response = await fetch(url, options)
 
-        // 等待响应，并将响应作为JSON字符串反序列化为javascript object
-        let rspjson = await response.json()
-        console.log(rspjson)
+        protobuf.load("proto/add.proto", function (err, root) {
+            if (err) throw err;
 
-        if (0 == rspjson.status.code) {
-            // 使用结果来更新对应元素的内容
-            document.getElementById('result').innerText = rspjson.result
-        } else {
-            alert(rspjson.status.message + "\n即将重新登录!");
-            window.location.href = "login.html";
-        }
+            console.log(data)
+            // 获取消息类型Obtain a message type
+            var pbreq = root.lookupType("logics.AddReq");
+            // 验证有效负载(如可能不完整或无效 比如password, proto定义是string类型, 如果payload设为int的数值,就会返回错误)
+            if (pbreq.verify(data)) throw Error(errMsg);
 
+            // 根据payload创建消息体
+            var message = pbreq.create(data);
+            console.log(message);
+
+            // Encode a message to an Uint8Array (browser) or Buffer (node)
+            var buffer = pbreq.encode(message).finish();
+            const url = '/api/addpost';
+            const options = { body: buffer, method: "POST" };
+            // 发出http post请求, 等待响应
+            fetch(url, options).then(function (response) {
+                response.arrayBuffer().then(function (buffer) {
+                    // 获取消息类型Obtain a message type
+                    var msg = root.lookupType("logics.AddRsp").decode(new Uint8Array(buffer))
+                    console.log(msg);
+
+                    if (0 == msg.code) {
+                        document.getElementById('result').innerText = msg.result
+                    } else if (-1 == msg.code) {
+                        document.getElementById('result').innerText = msg.message;
+                        alert(msg.message + "\n即将重新登录!");
+                        window.location.href = "login.html";
+                    }
+                })
+            });
+        });
     }
 
-    async function addget() {
+    function addget() {
         // 获取输入框内的值
         var num1 = document.getElementById('num1').value;
         var num2 = document.getElementById('num2').value;
@@ -100,19 +119,25 @@
             method: "GET"
         }
         // 发出http post请求
-        let response = await fetch(url, options)
+        fetch(url, options).then(function (response) {
+            response.arrayBuffer().then(function (buffer) {
+                // 获取消息类型Obtain a message type
+                protobuf.load("proto/add.proto", function (err, root) {
+                    if (err) throw err;
+                    // 获取消息类型Obtain a message type
+                    var msg = root.lookupType("logics.AddRsp").decode(new Uint8Array(buffer))
+                    console.log(msg);
 
-        // 等待响应，并将响应作为JSON字符串反序列化为javascript object
-        let rspjson = await response.json()
-        console.log(rspjson)
-
-        if (0 == rspjson.status.code) {
-            // 使用结果来更新对应元素的内容
-            document.getElementById('result').innerText = rspjson.result
-        } else {
-            alert(rspjson.status.message + "\n即将重新登录!");
-            window.location.href = "login.html";
-        }
+                    if (0 == msg.code) {
+                        document.getElementById('result').innerText = msg.result
+                    } else if (-1 == msg.code) {
+                        document.getElementById('result').innerText = msg.message;
+                        alert(msg.message + "\n即将重新登录!");
+                        window.location.href = "login.html";
+                    }
+                });
+            })
+        });
     }
 
     var ws = null;

@@ -10,15 +10,13 @@ import (
 
 // [golang jwt-go的使用](https://www.cnblogs.com/jianga/p/12487267.html)
 // [使用JWT进行接口认证](https://studygolang.com/articles/27242?fr=sidebar)
-func UserLogin(req UserLoginReq) UserLoginRsp {
+func UserLogin(req *UserLoginReq) UserLoginRsp {
+
 	// 查询用户名是否已存在
 	var result User
 	models.NewMgo().FindOne("username", req.Username).Decode(&result)
 
-	rsp := UserLoginRsp{
-		Code: 0,
-		Message: "",
-	}
+	var rsp UserLoginRsp
 
 	if result.Password == req.Password {
 		rsp.Token = TokenGenerate(result.Username)
@@ -36,24 +34,25 @@ func UserLogin(req UserLoginReq) UserLoginRsp {
 	return rsp
 }
 
-func UserLogout(username string, token string) {
+func UserLogout(req *UserLogoutReq) {
 
+	log.Println(req)
 	// 从redis查询token
-	ret, err := models.FindToken(username)
+	ret, err := models.FindToken(req.Username)
 	if err != nil {
 		return
 	}
 
-	if token != ret {
+	if req.Token != ret {
 		return
 	}
 
-	TokenDelete(username)
-	log.Println("注销用户:", username)
+	TokenDelete(req.Username)
+	log.Println("注销用户:", req.Username)
 	return
 }
 
-func UserRegister(req UserRegisterReq) Status {
+func UserRegister(req *UserRegisterReq) Status {
 
 	// 打印请求数据
 	log.Println("post req: ", req.Username, req.Password, req.Email)
@@ -86,12 +85,12 @@ func UserRegister(req UserRegisterReq) Status {
 	return rsp
 }
 
-func UserSetPhoto(req UserSetPhotoReq) Status {
+func UserSetPhoto(req *UserSetPhotoReq) Status {
 
 	var userRsp Status
 	// 查询用户名是否已存在
 	var result User
-	models.NewMgo().FindOne("username", req.Username).Decode(&result)
+	_ = models.NewMgo().FindOne("username", req.Username).Decode(&result)
 	if len(result.Username) <= 0 {
 		// 用户名不存在
 		userRsp.Code = 1
@@ -117,7 +116,7 @@ func UserSetPhoto(req UserSetPhotoReq) Status {
 	return userRsp
 }
 
-func UserSetPassword(req UserSetPasswordReq) Status {
+func UserSetPassword(req *UserSetPasswordReq) Status {
 
 	log.Println(req)
 	// 查询用户名是否已存在
