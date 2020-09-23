@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"github.com/githubchry/goweb/configs"
 	"github.com/githubchry/goweb/internal/dao/drivers"
 	"github.com/githubchry/goweb/internal/logics"
@@ -12,7 +10,6 @@ import (
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -74,25 +71,14 @@ const (
 
 func main() {
 	// grpc
-	// TLS证书解析验证
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	cert, err := credentials.NewServerTLSFromFile(certFile, keyFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	certPool := x509.NewCertPool()
-	ca, _ := ioutil.ReadFile("cert/ca.pem")
-	certPool.AppendCertsFromPEM(ca)
-
-	creds := credentials.NewTLS(&tls.Config{
-		Certificates: []tls.Certificate{cert},//服务端证书
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		RootCAs:      	certPool,
-	})
-
 	var grpcServer *grpc.Server
 	if true {
-		grpcServer = grpc.NewServer(grpc.Creds(creds))
+		grpcServer = grpc.NewServer(grpc.Creds(cert))
 	} else {
 		grpcServer = grpc.NewServer()
 	}
