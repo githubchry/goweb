@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"github.com/githubchry/goweb/configs"
 	"github.com/githubchry/goweb/internal/dao/drivers"
 	"github.com/githubchry/goweb/internal/logics"
@@ -10,6 +11,8 @@ import (
 	"github.com/githubchry/goweb/internal/view"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -65,29 +68,40 @@ func printAddr() {
 }
 
 const (
-	certFile = "../configs/cacert.pem"
-	keyFile = "../configs/privkey.key"
+	certFile = "../cert/cert.pem"
+	keyFile =  "../cert/key.pem"
 )
 
 func main() {
-
-	// TLS证书解析验证
-	if _, err := tls.LoadX509KeyPair(certFile, keyFile); err != nil {
-		log.Fatal(err)
-	}
-
-	initdbcfg()
-
 	// grpc
-	lis, err := net.Listen("tcp", "127.0.0.1:1234")
+	// TLS证书解析验证
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	grpcServer := grpc.NewServer()
-	logics.RegisterAddServer(grpcServer, new(logics.AddServiceImpl))
+	certPool := x509.NewCertPool()
+	ca, _ := ioutil.ReadFile("cert/ca.pem")
+	certPool.AppendCertsFromPEM(ca)
 
+	creds := credentials.NewTLS(&tls.Config{
+		Certificates: []tls.Certificate{cert},//服务端证书
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		RootCAs:      	certPool,
+	})
+
+	var grpcServer *grpc.Server
+	if true {
+		grpcServer = grpc.NewServer(grpc.Creds(creds))
+	} else {
+		grpcServer = grpc.NewServer()
+	}
+	//
+	logics.RegisterAddServer(grpcServer, new(logics.AddServiceImpl))
+	lis,_:=net.Listen("tcp",":8848")
 	go grpcServer.Serve(lis)
+
+	initdbcfg()
 
 	// http2
 	route := mux.NewRouter()
