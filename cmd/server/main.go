@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"github.com/githubchry/goweb/configs"
 	"github.com/githubchry/goweb/internal/dao/drivers"
 	"github.com/githubchry/goweb/internal/logics"
@@ -63,8 +64,17 @@ func printAddr() {
 	}
 }
 
+const (
+	certFile = "../configs/cacert.pem"
+	keyFile = "../configs/privkey.key"
+)
 
 func main() {
+
+	// TLS证书解析验证
+	if _, err := tls.LoadX509KeyPair(certFile, keyFile); err != nil {
+		log.Fatal(err)
+	}
 
 	initdbcfg()
 
@@ -73,14 +83,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	grpcServer := grpc.NewServer()
 	logics.RegisterAddServer(grpcServer, new(logics.AddServiceImpl))
-	err = grpcServer.Serve(lis)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	// httpdddddddddd
+	go grpcServer.Serve(lis)
+
+	// http2
 	route := mux.NewRouter()
 	route.Use(middleware.ElapsedTime)
 
@@ -108,7 +117,7 @@ func main() {
 	printAddr()
 
 	// 启动http服务
-	err = http.ListenAndServe(":"+strconv.Itoa(httpport), route)
+	err = http.ListenAndServeTLS(":"+strconv.Itoa(httpport), certFile, keyFile, route)
 	if err != nil {
 		log.Fatal(err)
 	}
