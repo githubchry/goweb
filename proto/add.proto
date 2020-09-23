@@ -9,6 +9,7 @@ option go_package = "../internal/logics";
 //message和enum命名采用驼峰命名方式，大写开头 比如Packet和PacketType
 //字段命名采用小写字母加下划线分隔方式 比如packet和packet_type
 
+//protoc --go_out=plugins=grpc:. add.proto
 
 message AddReq {
   string username = 1;
@@ -20,4 +21,9 @@ message AddRsp {
   int32 code = 1;
   string message = 2;
   int64 result = 3;
+}
+
+// grpc接口
+service Add {
+  rpc Add (AddReq) returns (AddRsp);
 }

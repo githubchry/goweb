@@ -8,6 +8,7 @@ import (
 	"github.com/githubchry/goweb/internal/protocol"
 	"github.com/githubchry/goweb/internal/view"
 	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
 	"log"
 	"net"
 	"net/http"
@@ -62,10 +63,24 @@ func printAddr() {
 	}
 }
 
+
 func main() {
 
 	initdbcfg()
 
+	// grpc
+	lis, err := net.Listen("tcp", "127.0.0.1:1234")
+	if err != nil {
+		log.Fatal(err)
+	}
+	grpcServer := grpc.NewServer()
+	logics.RegisterAddServer(grpcServer, new(logics.AddServiceImpl))
+	err = grpcServer.Serve(lis)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// httpdddddddddd
 	route := mux.NewRouter()
 	route.Use(middleware.ElapsedTime)
 
@@ -77,13 +92,13 @@ func main() {
 	route.HandleFunc("/api/register", protocol.HTTPUserRegisterHandler)           // POST
 	route.HandleFunc("/api/userSetPhoto", protocol.HTTPUserSetPhotoHandler)       // POST
 	route.HandleFunc("/api/userSetPassword", protocol.HTTPUserSetPasswordHandler) // POST
-
 	route.HandleFunc("/api/presignedUrl", protocol.HTTPPresignedUrlHandler) // POST
 
 	route.HandleFunc("/api/echo", logics.Echo) //WEBSOCKET
 
 	route.HandleFunc("/user/{username}", view.HTTPUserPageHandler)            // GET
 	route.HandleFunc("/settings/{username}", view.HTTPUserSettingPageHandler) // GET
+
 
 	route.PathPrefix("/proto").Handler(http.StripPrefix("/proto", http.FileServer(http.Dir("../proto"))))
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等
@@ -93,7 +108,7 @@ func main() {
 	printAddr()
 
 	// 启动http服务
-	err := http.ListenAndServe(":"+strconv.Itoa(httpport), route)
+	err = http.ListenAndServe(":"+strconv.Itoa(httpport), route)
 	if err != nil {
 		log.Fatal(err)
 	}
