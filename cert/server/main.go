@@ -10,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"flag"
+	"io/ioutil"
 	"log"
 	"math/big"
 	"net"
@@ -19,15 +20,18 @@ import (
 )
 
 const (
-	certFileName = "ca.pem"
-	keyFileName =  "ca.key"
+	rootCertFileName = "../ca.pem"
+	rootKeyFileName  = "../ca.key"
+	serverCertFileName = "server.pem"
+	serverKeyFileName  = "server.key"
+	serverCsrFileName  = "server.csr"
 )
 
 var (
-	host       = flag.String("host", 			"chry-root", 	"用逗号分隔的主机名和IP来生成证书")
+	host       = flag.String("host", 			"chry-server", 	"用逗号分隔的主机名和IP来生成证书")
 	validFrom  = flag.String("start-date", 	"", 				"创建日期格式为Jan 1 15:04:05 2011")
 	validFor   = flag.Duration("duration", 	3650*24*time.Hour, 		"该证书的有效期")
-	isCA       = flag.Bool("ca", 				true, 			"该证书是否应该是它自己的证书权威机构")
+	isCA       = flag.Bool("ca", 				false, 			"该证书是否应该是它自己的证书权威机构")
 	rsaBits    = flag.Int("rsa-bits", 		2048, 			"要生成的RSA密钥的大小. 如果设置了--ecdsa-curve，则忽略")
 	ecdsaCurve = flag.String("ecdsa-curve", 	"", 				"用ECDSA曲线生成密钥. 有效值: P224, P256 (推荐), P384, P521")
 	ed25519Key = flag.Bool("ed25519", 		false, 			"生成Ed25519密钥")
@@ -47,6 +51,10 @@ func publicKey(priv interface{}) interface{} {
 }
 
 func main() {
+
+	// log打印设置: Lshortfile文件名+行号  LstdFlags日期加时间
+	log.SetFlags(log.Llongfile | log.LstdFlags)
+
 	flag.Parse()
 
 	if len(*host) == 0 {
@@ -85,6 +93,86 @@ func main() {
 	// authentication.
 	if _, isRSA := priv.(*rsa.PrivateKey); isRSA {
 		keyUsage |= x509.KeyUsageKeyEncipherment
+		log.Println("keyUsage |= x509.KeyUsageKeyEncipherment")
+	}
+
+	// 保存私钥到文件
+	keyOut, err := os.OpenFile(serverKeyFileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		log.Fatalf("Failed to open %s for writing: %v", serverKeyFileName, err)
+		return
+	}
+	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		log.Fatalf("Unable to marshal private key: %v", err)
+	}
+	if err := pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes}); err != nil {
+		log.Fatalf("Failed to write data to %s: %v", serverKeyFileName, err)
+	}
+	if err := keyOut.Close(); err != nil {
+		log.Fatalf("Error closing %s: %v", serverKeyFileName, err)
+	}
+	log.Println("已经生成私钥:", serverKeyFileName)
+
+	//=========================================================================
+	csrtmpl := x509.CertificateRequest{
+		Subject: pkix.Name{
+			Organization: []string{"Acme Co"},
+		},
+	}
+
+	hosts := strings.Split(*host, ",")
+	for _, h := range hosts {
+		if ip := net.ParseIP(h); ip != nil {
+			csrtmpl.IPAddresses = append(csrtmpl.IPAddresses, ip)
+		} else {
+			csrtmpl.DNSNames = append(csrtmpl.DNSNames, h)
+		}
+	}
+
+	// 生成证书请求
+	csrOut, err := os.OpenFile(serverCsrFileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		log.Fatalf("Failed to open %s for writing: %v", serverCsrFileName, err)
+		return
+	}
+
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &csrtmpl, priv)
+	if err != nil {
+		log.Fatalf("Failed to create CSR: %v", err)
+	}
+
+	if err = pem.Encode(csrOut, &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrBytes}); err != nil {
+		log.Fatalf("Failed to Encode CSR: %v", err)
+	}
+
+	if err := csrOut.Close(); err != nil {
+		log.Fatalf("Error closing %s: %v", serverCsrFileName, err)
+	}
+	log.Println("已经生成证书请求:", serverCsrFileName)
+
+	// 基于CA证书签发服务端证书公钥
+	//解析根证书
+	rootCertFile, err := ioutil.ReadFile(rootCertFileName)
+	if err != nil {
+		log.Fatalf("Failed to read %s:%v", rootCertFileName, err)
+	}
+	rootCertBlock, _ := pem.Decode(rootCertFile)
+
+	rootCert, err := x509.ParseCertificate(rootCertBlock.Bytes)
+	if err != nil {
+		log.Fatalf("Failed to ParseCertificate %s:%v", rootCertFileName, err)
+	}
+
+	//解析私钥
+	rootKeyFile, err := ioutil.ReadFile(rootKeyFileName)
+	if err != nil {
+		log.Fatalf("Failed to read %s:%v", rootKeyFileName, err)
+	}
+	rootKeyBlock, _ := pem.Decode(rootKeyFile)
+	rootKey, err := x509.ParsePKCS8PrivateKey(rootKeyBlock.Bytes)
+	if err != nil {
+		log.Fatalf("Failed to ParsePKCS1PrivateKey %s:%v", rootKeyFileName, err)
 	}
 
 	var notBefore time.Time
@@ -118,7 +206,7 @@ func main() {
 		BasicConstraintsValid: true,
 	}
 
-	hosts := strings.Split(*host, ",")
+	hosts = strings.Split(*host, ",")
 	for _, h := range hosts {
 		if ip := net.ParseIP(h); ip != nil {
 			template.IPAddresses = append(template.IPAddresses, ip)
@@ -132,13 +220,13 @@ func main() {
 		template.KeyUsage |= x509.KeyUsageCertSign
 	}
 
-	// 生成证书
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
+	// 基于CA证书 签发服务端证书公钥
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, rootCert, publicKey(priv), rootKey)
 	if err != nil {
 		log.Fatalf("Failed to create certificate: %v", err)
 	}
 
-	certOut, err := os.Create(certFileName)
+	certOut, err := os.Create(serverCertFileName)
 	if err != nil {
 		log.Fatalf("Failed to open cert.pem for writing: %v", err)
 	}
@@ -148,22 +236,5 @@ func main() {
 	if err := certOut.Close(); err != nil {
 		log.Fatalf("Error closing cert.pem: %v", err)
 	}
-	log.Println("wrote", certFileName)
-
-	keyOut, err := os.OpenFile(keyFileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		log.Fatalf("Failed to open key.pem for writing: %v", err)
-		return
-	}
-	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
-	if err != nil {
-		log.Fatalf("Unable to marshal private key: %v", err)
-	}
-	if err := pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes}); err != nil {
-		log.Fatalf("Failed to write data to key.pem: %v", err)
-	}
-	if err := keyOut.Close(); err != nil {
-		log.Fatalf("Error closing %s: %v", keyFileName, err)
-	}
-	log.Println("wrote", keyFileName)
+	log.Println("已经签发公钥", serverCertFileName)
 }

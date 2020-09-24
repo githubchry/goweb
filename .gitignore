@@ -15,3 +15,7 @@
 # vendor/
 main
 .idea
+*.pem
+*.key
+*.csr
+

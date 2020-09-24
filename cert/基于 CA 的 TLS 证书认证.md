@@ -21,7 +21,7 @@ openssl x509 -req -sha256 -days 3650 -CA ca.pem -CAkey ca.key -CAcreateserial -i
 
 生成客户端证书密钥
 openssl ecparam -genkey -name secp384r1 -out client.key
-根据服务端证书密钥生成证书请求文件
+根据客户端证书密钥生成证书请求文件
 openssl req -new -key client.key -out client.csr
 基于CA证书签发客户端证书公钥
 openssl x509 -req -sha256 -days 3650 -CA ca.pem -CAkey ca.key -CAcreateserial -in client.csr -out client.pem
@@ -33,7 +33,15 @@ openssl x509 -req -sha256 -days 3650 -CA ca.pem -CAkey ca.key -CAcreateserial -i
 疑难问题解决方案:
 https://github.com/golang/go/issues/39568#issuecomment-671424481
 
-
+https://zhuanlan.zhihu.com/p/105232920
+数字证书和golang的研究
 https://blog.csdn.net/u010846177/article/details/54357239
+使用golang进行证书签发和双向认证
+https://blog.csdn.net/weixin_34419326/article/details/89058910
+grpc使用自制CA证书校验公网上的连接请求
+https://www.jianshu.com/p/751066a6c689
+
+Golang gRPC笔记03 基于 CA 的 TLS 证书认证
+https://www.cnblogs.com/qq037/p/13284461.html
 
 ```
