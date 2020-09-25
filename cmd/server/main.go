@@ -91,11 +91,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	creds := credentials.NewTLS(&tls.Config{
+	tlsConfig := tls.Config{
 		Certificates: []tls.Certificate{cert},	//服务端证书
 		ClientAuth: tls.RequireAndVerifyClientCert,
 		ClientCAs: certPool,
-	})
+	}
+
+	creds := credentials.NewTLS(&tlsConfig)
 
 	var grpcServer *grpc.Server
 	if true {
@@ -136,9 +138,14 @@ func main() {
 
 	// 打印本机IP地址
 	printAddr()
-
 	// 启动http服务
-	err = http.ListenAndServeTLS(":"+strconv.Itoa(httpport), serverCertFileName, serverKeyFileName, route)
+	httpServer := &http.Server{
+		Addr: ":"+strconv.Itoa(httpport),
+		Handler: route,
+		TLSConfig: &tlsConfig,
+	}
+
+	err = httpServer.ListenAndServeTLS(serverCertFileName, serverKeyFileName)
 	if err != nil {
 		log.Fatal(err)
 	}
