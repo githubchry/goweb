@@ -18,4 +18,5 @@ main
 *.pem
 *.key
 *.csr
+*.cer
 
