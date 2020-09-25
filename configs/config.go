@@ -13,6 +13,11 @@ type HTTPCfg struct {
 	Port int    `json:"port"`
 }
 
+type GRPCCfg struct {
+	Addr string `json:"addr"`
+	Port int    `json:"port"`
+}
+
 type MinioCfg struct {
 	Addr     string `json:"addr"`
 	Port     int    `json:"port"`
@@ -38,6 +43,8 @@ type RedisCfg struct {
 
 type AppCfg struct {
 	HTTPCfg  HTTPCfg  `json:"http"`
+	GRPCCfg  GRPCCfg  `json:"grpc"`
+
 	MinioCfg MinioCfg `json:"minio"`
 	MongoCfg MongoCfg `json:"mongo"`
 	RedisCfg RedisCfg `json:"redis"`

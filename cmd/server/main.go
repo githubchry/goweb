@@ -17,6 +17,7 @@ import (
 )
 
 var httpport int
+var grpcport int
 
 func initdbcfg() {
 	// log打印设置: Lshortfile文件名+行号  LstdFlags日期加时间
@@ -27,6 +28,7 @@ func initdbcfg() {
 		return
 	}
 	httpport = appcfg.HTTPCfg.Port
+	grpcport = appcfg.GRPCCfg.Port
 
 	// 初始化连接到MongoDB
 	err := drivers.MongoDBInit(appcfg.MongoCfg)
@@ -70,25 +72,23 @@ const (
 )
 
 func main() {
-	// TLS证书解析验证
+
+	initdbcfg()
+
 	// grpc
+	// TLS证书解析验证
 	cert, err := credentials.NewServerTLSFromFile(certFileName, keyFileName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var grpcServer *grpc.Server
-	if true {
-		grpcServer = grpc.NewServer(grpc.Creds(cert))
-	} else {
-		grpcServer = grpc.NewServer()
-	}
-	//
-	logics.RegisterAddServer(grpcServer, new(logics.AddServiceImpl))
-	lis, _:=net.Listen("tcp",":8848")
-	go grpcServer.Serve(lis)
+	grpcServer := grpc.NewServer(grpc.Creds(cert))
 
-	initdbcfg()
+	// 注册grpc方法
+	logics.RegisterAddServer(grpcServer, new(logics.AddServiceImpl))
+
+	lis, _:=net.Listen("tcp", ":"+strconv.Itoa(grpcport))
+	go grpcServer.Serve(lis)
 
 	// http2
 	route := mux.NewRouter()
@@ -108,7 +108,6 @@ func main() {
 
 	route.HandleFunc("/user/{username}", view.HTTPUserPageHandler)            // GET
 	route.HandleFunc("/settings/{username}", view.HTTPUserSettingPageHandler) // GET
-
 
 	route.PathPrefix("/proto").Handler(http.StripPrefix("/proto", http.FileServer(http.Dir("../proto"))))
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等

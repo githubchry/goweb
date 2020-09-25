@@ -68,6 +68,10 @@ sudo apt install redis
 运行服务器
 redis-server
 或者
+创建 redis.conf 下载http://download.redis.io/redis-stable/redis.conf
+文件放到这里/mnt/e/temp/redis/config/redis.conf 
+找到bind 127.0.0.1，把这行前面加个#注释掉
+
 docker run -p 6379:6379 --name redis-chry -d \
 -v /mnt/e/temp/redis/data:/data \
 -v /mnt/e/temp/redis/config:/etc/redis \
@@ -172,3 +176,62 @@ db.auth('chry','chry')
 
 
 ```
+
+
+# docker-compose
+[基于Docker + Go+ Kafka + Redis + MySQL的秒杀已经Jmeter压力测试](https://blog.csdn.net/q3585914/article/details/90604565)
+
+[Docker快速搭建Kafka 1.x集群](https://www.jianshu.com/p/8ccd712e2599)
+
+Docker Compose是一个用来定义和运行复杂应用的Docker工具。一个使用Docker容器的应用，通常由多个容器组成。使用Docker Compose不再需要使用shell脚本来启动容器。 
+Compose 通过一个配置文件来管理多个Docker容器，在配置文件中，所有的容器通过services来定义，然后使用docker-compose脚本来启动，停止和重启应用，和应用中的服务以及所有依赖服务的容器，非常适合组合使用多个容器进行开发的场景。
+
+比如, kafka依赖于zookeeper, 每次使用kafka前都要先部署zookeeper, 于是可以通过docker-compose直接把这两个容器管理起来:
+
+```yaml
+version: '3'
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+  kafka:
+    image: wurstmeister/kafka
+    build: .
+    ports:
+      - "9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: 127.0.0.1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    volumes:
+      - /mnt/e/temp/kafka/docker.sock:/var/run/docker.sock
+```
+在`docker-compose.yml`当前目录下运行:`docker-compose up -d`
+```shell script
+chry@DESKTOP-N2FV3PF:/mnt/e/temp/kafka$ docker-compose up -d
+Creating network "kafka_default" with the default driver
+Creating kafka_kafka_1     ... done
+Creating kafka_zookeeper_1 ... done
+chry@DESKTOP-N2FV3PF:/mnt/e/temp/kafka$
+
+进入kafka_kafka_1后台测试可用性:
+docker exec -it kafka_kafka_1 bash
+
+## 创建主题
+kafka-topics.sh --create --zookeeper 10.11.5.100:2181 --replication-factor 1 --partitions 1 --topic mykafka
+## 查看主题 
+kafka-topics.sh --list --zookeeper 10.11.5.100:2181
+## 发送消息
+kafka-console-producer.sh --broker-list 10.11.5.100:9092 --topic mykafka
+## 接受消息
+kafka-console-consumer.sh --bootstrap-server 10.11.5.100:9092 --from-beginning --topic mykafka
+
+## 删除主题 
+kafka-topics.sh --delete --zookeeper 10.11.5.100:2181  --topic mykafka
+
+退出并删除
+docker-compose down
+```
+#
+
+

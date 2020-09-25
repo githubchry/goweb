@@ -24,14 +24,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("-------------------------")
-	var conn *grpc.ClientConn
-	if true {
-		conn, err = grpc.Dial("127.0.0.1:8848", grpc.WithTransportCredentials(cert))
-	} else {
-		conn, err = grpc.Dial("127.0.0.1:8848", grpc.WithInsecure(), grpc.WithBlock())
-	}
-	log.Println("-------------------------")
+	conn, err := grpc.Dial("127.0.0.1:7070", grpc.WithTransportCredentials(cert), grpc.WithBlock())
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -40,10 +33,7 @@ func main() {
 	client := logics.NewAddClient(conn)
 
 	req := &logics.AddReq{}
-	req.Operand = []int32{
-		123,
-		456,
-	}
+	req.Operand = []int32{123, 456,}
 
 	reply, err := client.Add(context.Background(), req)
 	if err != nil {
