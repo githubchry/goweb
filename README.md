@@ -181,12 +181,23 @@ db.auth('chry','chry')
 # docker-compose
 [基于Docker + Go+ Kafka + Redis + MySQL的秒杀已经Jmeter压力测试](https://blog.csdn.net/q3585914/article/details/90604565)
 
-[Docker快速搭建Kafka 1.x集群](https://www.jianshu.com/p/8ccd712e2599)
+[kafka的Docker镜像使用说明(wurstmeister/kafka)](https://blog.csdn.net/boling_cavalry/article/details/85395080)
 
 Docker Compose是一个用来定义和运行复杂应用的Docker工具。一个使用Docker容器的应用，通常由多个容器组成。使用Docker Compose不再需要使用shell脚本来启动容器。 
 Compose 通过一个配置文件来管理多个Docker容器，在配置文件中，所有的容器通过services来定义，然后使用docker-compose脚本来启动，停止和重启应用，和应用中的服务以及所有依赖服务的容器，非常适合组合使用多个容器进行开发的场景。
 
-比如, kafka依赖于zookeeper, 每次使用kafka前都要先部署zookeeper, 于是可以通过docker-compose直接把这两个容器管理起来:
+比如, kafka依赖于zookeeper, 每次使用kafka前都要先部署zookeeper
+```shell script
+docker run -d --name zookeeper --publish 2181:2181  wurstmeister/zookeeper
+docker run -d --name kafka --publish 9092:9092 \
+--link zookeeper \
+--env KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
+--env KAFKA_ADVERTISED_HOST_NAME=127.0.0.1 \
+--env KAFKA_ADVERTISED_PORT=9092 \
+wurstmeister/kafka
+
+```
+于是可以通过docker-compose直接把这两个容器管理起来:
 
 ```yaml
 version: '3'
@@ -199,12 +210,14 @@ services:
     image: wurstmeister/kafka
     build: .
     ports:
-      - "9092"
+      - "9092:9092"
     environment:
-      KAFKA_ADVERTISED_HOST_NAME: 127.0.0.1
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://:9092
+      KAFKA_LISTENERS: PLAINTEXT://:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
     volumes:
       - /mnt/e/temp/kafka/docker.sock:/var/run/docker.sock
+
 ```
 在`docker-compose.yml`当前目录下运行:`docker-compose up -d`
 ```shell script
