@@ -3,6 +3,7 @@ module github.com/githubchry/goweb
 go 1.15
 
 require (
+	github.com/Shopify/sarama v1.27.0 // indirect
 	github.com/fullstorydev/grpcurl v1.7.0 // indirect
 	github.com/go-ini/ini v1.61.0 // indirect
 	github.com/golang/protobuf v1.4.2

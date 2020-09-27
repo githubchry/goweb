@@ -86,6 +86,7 @@ func main() {
 
 	// 注册grpc方法
 	logics.RegisterAddServer(grpcServer, new(logics.AddServiceImpl))
+	logics.RegisterEventUploadServer(grpcServer, new(logics.EventUploadServiceImpl))
 
 	lis, _:=net.Listen("tcp", ":"+strconv.Itoa(grpcport))
 	go grpcServer.Serve(lis)

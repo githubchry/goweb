@@ -1,0 +1,47 @@
+syntax = "proto3";      //指明使用proto3语法,否则编译器默认使用proto2的语法
+package logics;       //包声明符, 相当于命名空间，产生的类会被包装在C++命名空间中
+option go_package = "../internal/logics";
+import public "google/protobuf/timestamp.proto";
+//proto3取消了optional和required限定修饰符，只能使用singular(默认)和repeated
+//singular：该字段可以有0个或者1个（但是不能超过1个）。
+//repeated：该字段可以重复任意多次（包括0次）。重复的值的顺序会被保留。
+
+//命名规范
+//message和enum命名采用驼峰命名方式，大写开头 比如Packet和PacketType
+//字段命名采用小写字母加下划线分隔方式 比如packet和packet_type
+
+//protoc --go_out=plugins=grpc:. event.proto
+
+message EventReq {
+  google.protobuf.Timestamp time = 1; //时间
+
+  //proto里面enum与C语言意义一样，但是语法有差别，如枚举定义的值不能省略，以分号结束
+  //枚举器常量必须在32位整数的范围内。枚举值使用变量编码，不推荐使用负值，效率很低。
+  //联系方式
+  enum EventType {
+    option allow_alias = true;  //可以通过为不同的枚举常量指定相同的值来定义别名(alias)
+    EVENT_TYPE_UNKNOW = 0;
+    EVENT_TYPE_ERROR = 0;
+    //枚举默认为第一个枚举定义的第一个值，必须是0，且为无效值，所有有意义的值请不要定义成0值
+    //-------------------------------------------
+    EVENT_TYPE_PEDESTRIANS = 1;
+    EVENT_TYPE_FIGHTS = 2;
+    EVENT_TYPE_SUSPECT = 3;
+    EVENT_TYPE_MOTION_DETECT=4;
+  }
+  EventType type = 2;
+
+  string addr = 3;
+  string token = 4;
+  string imgurl = 5;
+}
+
+message EventRsp {
+  int32 code = 1;
+  string message = 2;
+}
+
+// grpc接口
+service EventUpload {
+  rpc EventUpload (EventReq) returns (EventRsp);
+}

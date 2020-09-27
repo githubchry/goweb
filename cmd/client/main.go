@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/githubchry/goweb/internal/logics"
+	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"log"
@@ -24,20 +25,26 @@ func main() {
 		log.Fatal(err)
 	}
 
-	conn, err := grpc.Dial("127.0.0.1:7070", grpc.WithTransportCredentials(cert), grpc.WithBlock())
+	conn, err := grpc.Dial("127.0.0.1:7070", grpc.WithTransportCredentials(cert))
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer conn.Close()
 
-	client := logics.NewAddClient(conn)
+	// 模拟报警事件上传
+	client := logics.NewEventUploadClient(conn)
+	event := &logics.EventReq{
+		Time: ptypes.TimestampNow(),
+		Type: logics.EventReq_EVENT_TYPE_SUSPECT,
+		Addr: "192.168.1.99",
+		Token: "",
+		Imgurl: "",
+	}
 
-	req := &logics.AddReq{}
-	req.Operand = []int32{123, 456,}
-
-	reply, err := client.Add(context.Background(), req)
+	reply, err := client.EventUpload(context.Background(), event)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(reply.Result)
+
+	log.Println(reply.Message)
 }
