@@ -183,6 +183,8 @@ db.auth('chry','chry')
 
 [kafka的Docker镜像使用说明(wurstmeister/kafka)](https://blog.csdn.net/boling_cavalry/article/details/85395080)
 
+[《KAFKA官方文档》入门指南](http://ifeve.com/kafka-1/)
+
 Docker Compose是一个用来定义和运行复杂应用的Docker工具。一个使用Docker容器的应用，通常由多个容器组成。使用Docker Compose不再需要使用shell脚本来启动容器。 
 Compose 通过一个配置文件来管理多个Docker容器，在配置文件中，所有的容器通过services来定义，然后使用docker-compose脚本来启动，停止和重启应用，和应用中的服务以及所有依赖服务的容器，非常适合组合使用多个容器进行开发的场景。
 
@@ -231,13 +233,13 @@ chry@DESKTOP-N2FV3PF:/mnt/e/temp/kafka$
 docker exec -it kafka_kafka_1 bash
 
 ## 创建主题
-kafka-topics.sh --create --zookeeper 10.11.5.100:2181 --replication-factor 1 --partitions 1 --topic mykafka
+kafka-topics.sh --create --zookeeper 10.11.5.89:2181 --replication-factor 1 --partitions 1 --topic event1
 ## 查看主题 
 kafka-topics.sh --list --zookeeper 10.11.5.100:2181
 ## 发送消息
 kafka-console-producer.sh --broker-list 10.11.5.100:9092 --topic mykafka
 ## 接受消息
-kafka-console-consumer.sh --bootstrap-server 10.11.5.100:9092 --from-beginning --topic mykafka
+kafka-console-consumer.sh --bootstrap-server 10.11.5.100:9092 --from-beginning --topic event1
 
 ## 删除主题 
 kafka-topics.sh --delete --zookeeper 10.11.5.100:2181  --topic mykafka
@@ -245,6 +247,9 @@ kafka-topics.sh --delete --zookeeper 10.11.5.100:2181  --topic mykafka
 退出并删除
 docker-compose down
 ```
+
+
+[证书访问](https://www.jianshu.com/p/3102418e5a7d)
 #
 
 

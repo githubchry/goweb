@@ -41,6 +41,11 @@ type RedisCfg struct {
 	Password string `json:"password"`
 }
 
+type KafkaCfg struct {
+	Addr     string `json:"addr"`
+	Port     int    `json:"port"`
+}
+
 type AppCfg struct {
 	HTTPCfg  HTTPCfg  `json:"http"`
 	GRPCCfg  GRPCCfg  `json:"grpc"`
@@ -48,6 +53,7 @@ type AppCfg struct {
 	MinioCfg MinioCfg `json:"minio"`
 	MongoCfg MongoCfg `json:"mongo"`
 	RedisCfg RedisCfg `json:"redis"`
+	KafkaCfg KafkaCfg `json:"kafka"`
 }
 
 /*************************************************

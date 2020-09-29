@@ -21,7 +21,7 @@ var grpcport int
 
 func initdbcfg() {
 	// log打印设置: Lshortfile文件名+行号  LstdFlags日期加时间
-	log.SetFlags(log.Llongfile | log.LstdFlags)
+	log.SetFlags(log.Llongfile | log.LstdFlags | log.Lmicroseconds)
 
 	appcfg, ok := configs.LoadConfig("../configs/config.json")
 	if !ok {
@@ -47,6 +47,13 @@ func initdbcfg() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// 初始化 KafkaMQ
+	err = drivers.KafkaMQInit(appcfg.KafkaCfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 func printAddr() {
@@ -74,6 +81,11 @@ const (
 func main() {
 
 	initdbcfg()
+
+	err := logics.EventQueueInit()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// grpc
 	// TLS证书解析验证
@@ -106,9 +118,12 @@ func main() {
 	route.HandleFunc("/api/presignedUrl", protocol.HTTPPresignedUrlHandler) // POST
 
 	route.HandleFunc("/api/echo", logics.Echo) //WEBSOCKET
+	route.HandleFunc("/api/eventResult", logics.EventResult) //WEBSOCKET
 
 	route.HandleFunc("/user/{username}", view.HTTPUserPageHandler)            // GET
 	route.HandleFunc("/settings/{username}", view.HTTPUserSettingPageHandler) // GET
+
+	route.HandleFunc("/image/post", protocol.HTTPImagePostHandler) // GET
 
 	route.PathPrefix("/proto").Handler(http.StripPrefix("/proto", http.FileServer(http.Dir("../proto"))))
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等

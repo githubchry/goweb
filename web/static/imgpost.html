@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>上传图片</title>
+</head>
+<body>
+
+</br>
+<input type="file" id="selector" accept="image/jpeg,image/png" />
+<button onclick="postImage();">上传</button>
+<button onclick="getImage();">下载</button>
+
+<div class="mui-content-padded">
+    <p id='result'>" "</p>
+</div>
+
+<p id="wsStatus">websocket未连接</p>
+<button type="button" name="cmdSendMsg" onclick="SendMsg();"> 发送 </button>
+<input type="text" id="sendmsg" /></br>
+接收到消息:<p id="wsRecv"> </p></br>
+<hr>
+
+<img src="" id="photo" width="200px"/>
+
+<script src="js/md5.js"></script>
+<script src="js/protobuf.js"></script>
+<!-- 内嵌的javascript代码 -->
+<script>
+    function postImage() {
+        // 获取输入框内的值
+        var file = document.getElementById('selector').files[0];
+        if (!file) {
+            console.log("请选择文件...");
+            return
+        }
+
+        console.log(file);
+
+        const url = '/image/post';
+        const options = {
+            body: file,
+            method: "POST"
+        }
+
+        // 发出http post请求, 等待响应
+        fetch(url, options).then((response)=>{
+            response.arrayBuffer().then((buffer)=>{
+                protobuf.load("../proto/user.proto", function (err, root) {
+                    if (err) throw err;
+                    var rspmsg = root.lookupType("logics.Status").decode(new Uint8Array(buffer));
+                    console.log(rspmsg);
+                    document.getElementById('result').innerText = rspmsg.message;
+                });
+            })
+        });
+    }
+
+    function getImage() {
+
+        const url = '/image/get';
+        const options = {method: "POST"}
+
+        // 发出http post请求, 等待响应
+        fetch(url, options).then((response)=>{
+            response.arrayBuffer().then((buffer)=>{
+                protobuf.load("../proto/user.proto", function (err, root) {
+                    if (err) throw err;
+                    var rspmsg = root.lookupType("logics.Status").decode(new Uint8Array(buffer));
+                    console.log(rspmsg);
+                    document.getElementById('result').innerText = rspmsg.message;
+                });
+            })
+        });
+    }
+
+    var ws = null;
+    window.onload = function() {
+        var domain = document.domain; //获取主机名        例如：172.20.11.111
+        var port = location.port; //获取端口号        例如：8000
+        var host = location.host; //获取主机名:端口号 例如：172.20.11.111:8000
+
+        ws = new WebSocket("wss://" + host + "/api/eventResult");
+        ws.onopen = function() {
+            // Web Socket 已连接 ws.readyState = 1
+            document.getElementById('wsStatus').innerText = "websocket已连接";
+
+            ws.onmessage = function(evt) {
+                document.getElementById('wsRecv').innerText += evt.data + "\n";
+            };
+
+            ws.onclose = function(evt) {
+                // Web Socket 已断开 ws.readyState = 3
+                document.getElementById('wsStatus').innerText = "websocket已断开";
+            };
+        }
+    }
+</script>
+</body>
+</html>
