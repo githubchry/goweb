@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/githubchry/goweb/internal/dao/models"
+	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"time"
@@ -52,6 +53,9 @@ var EventConsumer sarama.Consumer
 var ResultProducer sarama.AsyncProducer
 var ResultConsumer sarama.Consumer
 
+var wslist []*websocket.Conn
+var wschan chan []byte
+
 func EventQueueInit() error {
 	var err error
 
@@ -78,10 +82,74 @@ func EventQueueInit() error {
 		log.Println("NewConsumer", err)
 		return err
 	}
+	wschan = make(chan []byte)
+	go wspolling()
 
+	partitionList, err := EventConsumer.Partitions("event_struct") // 根据topic取到所有的分区
+	if err != nil {
+		log.Printf("fail to get list of partition:%v\n", err)
+	}
+	log.Println(partitionList)
+
+	for partition := range partitionList { // 遍历所有的分区
+		// 针对每个分区创建一个对应的分区消费者
+		partitionConsumer, err := EventConsumer.ConsumePartition("event_struct", int32(partition), sarama.OffsetNewest)
+		if err != nil {
+			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
+			return err
+		}
+		//defer partitionConsumer.AsyncClose()
+
+		// 异步从每个分区消费信息
+		go func(sarama.PartitionConsumer) {
+			for msg := range partitionConsumer.Messages() {
+				log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
+				wschan <- msg.Value
+			}
+		}(partitionConsumer)
+	}
 	return err
 }
 
+func DeleteSlice2(a []int) []int{
+	j := 0
+	for _, val := range a {
+		if val % 2 == 1 {
+			a[j] = val
+			j++
+		}
+	}
+	return a[:j]
+}
+// 监听最新结果, 发送到wslist上的每一个ws
+func wspolling() {
+	for {
+		log.Println("websocket轮询线程")
+		select {
+		case msg := <-wschan:
+			log.Println("websocket轮询线程收到返回结果:", msg)
+			log.Println("当前websocket客户端个数:", len(wslist))
+
+			idx := 0	// 记录下一个有效conn应该在的位置
+			for _, conn := range wslist{
+				log.Println("转发消息至:", &conn)
+
+				// 判断客户端是否已经断开
+				err := conn.WriteMessage(1, msg)
+				if err != nil {
+					log.Println("检测到客户端[", &conn, "]已断开")
+					conn.Close()
+				} else {
+					// 正常连接的客户端 更新到wslist[idx]
+					wslist[idx] = conn
+					idx++
+				}
+			}
+			// for过程中已经更新了list, 对结果进行截取
+			wslist = wslist[:idx]
+		}
+	}
+}
 /*
 1. 通过web api post图片到服务器
 2. 服务器协程A接受 生成事件 推送到kafka 可以结构体丢topicA  图片丢topicB
@@ -120,6 +188,7 @@ func EventPublish(ctx context.Context, img []byte) (*Status, error) {
 	return rsp, nil
 }
 
+
 // 通过websocket返回结果
 func EventResult(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, w.Header())
@@ -127,23 +196,6 @@ func EventResult(w http.ResponseWriter, r *http.Request) {
 		log.Print("upgrade:", err)
 		return
 	}
-	defer conn.Close()
 
-	partition := 0
-	partitionConsumer, err := EventConsumer.ConsumePartition("event_struct", int32(partition), sarama.OffsetNewest)
-	if err != nil {
-		log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
-		return
-	}
-	defer partitionConsumer.Close()
-
-	for {
-		msg := <-partitionConsumer.Messages()
-		log.Printf("Consumed message: [%s], offset: [%d]\n", msg.Value, msg.Offset)
-
-		err = conn.WriteMessage(1, msg.Value)
-		if err != nil {
-			log.Println("write:", err)
-		}
-	}
+	wslist = append(wslist, conn)
 }
