@@ -34,6 +34,7 @@ message EventReq {
   string addr = 3;
   string token = 4;
   string imgurl = 5;
+  int64  offset = 6;
 }
 
 message EventRsp {

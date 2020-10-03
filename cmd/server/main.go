@@ -118,11 +118,11 @@ func main() {
 	route.HandleFunc("/api/presignedUrl", protocol.HTTPPresignedUrlHandler) // POST
 
 	route.HandleFunc("/api/echo", logics.Echo) //WEBSOCKET
-	route.HandleFunc("/api/eventResult", logics.EventResult) //WEBSOCKET
 
 	route.HandleFunc("/user/{username}", view.HTTPUserPageHandler)            // GET
 	route.HandleFunc("/settings/{username}", view.HTTPUserSettingPageHandler) // GET
 
+	route.HandleFunc("/api/eventResult", logics.EventResult) //WEBSOCKET
 	route.HandleFunc("/image/post", protocol.HTTPImagePostHandler) // GET
 
 	route.PathPrefix("/proto").Handler(http.StripPrefix("/proto", http.FileServer(http.Dir("../proto"))))

@@ -16,7 +16,7 @@ func HTTPImagePostHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("method:", r.Method, "buf len:", len(buf)) //获取请求的方法
 
-	rsp, _:= logics.EventPublish(r.Context(), buf)
+	rsp, _:= logics.ImagePostHandler(r.Context(), buf)
 	data, _ := proto.Marshal(rsp)
 	w.Write(data)
 }

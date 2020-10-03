@@ -32,6 +32,9 @@ func KafkaMQInit(cfg configs.KafkaCfg) error {
 	//============ Consumer config ============
 	//接收失败通知
 	config.Consumer.Return.Errors = true
+	config.Consumer.Fetch.Max = 16
+	config.Consumer.Fetch.Min = 16
+	config.Consumer.MaxWaitTime = time.Second * 10
 
 
 	var err error
