@@ -3,13 +3,13 @@ package logics
 import (
 	"context"
 	"github.com/Shopify/sarama"
-	"github.com/githubchry/goweb/internal/dao/drivers"
 	"github.com/githubchry/goweb/internal/dao/models"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -41,7 +41,7 @@ broker存储topic的数据(partition)。如果某topic有N个partition，集群�
 
 
 */
-
+const MAXMSGBYTES = 1000000
 var EventProducer sarama.AsyncProducer
 var EventConsumer sarama.Consumer
 var ResultProducer sarama.AsyncProducer
@@ -52,21 +52,8 @@ var wschan chan []byte
 var msgchan chan EventReq
 
 
-func eventConsumerThread() {
-	msgchan = make(chan EventReq)
-	for {
-		select {
-		case msg := <-msgchan:
-			log.Println("收到事件结构体:", msg)
-		}
-	}
-}
-
-
-// 获取struct => 获取image => 分析图片(每次最多16张, 事件间隔最长30秒) => 结果发送到kafka
-func eventHanderThreadInit() error {
-
-	go eventConsumerThread()
+func eventStructConsumerThread() {
+	msgchan = make(chan EventReq, 100)
 
 	partitionList, err := EventConsumer.Partitions("event_struct") // 根据topic取到所有的分区
 	if err != nil {
@@ -79,7 +66,7 @@ func eventHanderThreadInit() error {
 		partitionConsumer, err := EventConsumer.ConsumePartition("event_struct", int32(partition), sarama.OffsetNewest)
 		if err != nil {
 			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
-			return err
+			return
 		}
 		//defer partitionConsumer.AsyncClose()
 
@@ -91,13 +78,68 @@ func eventHanderThreadInit() error {
 				//反序列化后 去获取image  ->chan
 				var req EventReq
 				err = proto.Unmarshal(msg.Value, &req)
-
+				if err != nil {
+					log.Printf("failed to Unmarshal proto:%v\n", err)
+					return
+				}
 				msgchan <- req
 
 			}
 		}(partitionConsumer)
 	}
-	return err
+}
+
+func eventImageConsumerThread() {
+
+	partitionList, err := EventConsumer.Partitions("event_image") // 根据topic取到所有的分区
+	if err != nil {
+		log.Printf("fail to get list of partition:%v\n", err)
+	}
+
+	// partition号从0开始
+	for partition := range partitionList { // 遍历所有的分区
+		// 针对每个分区创建一个对应的分区消费者
+		partitionConsumer, err := EventConsumer.ConsumePartition("event_image", int32(partition), sarama.OffsetNewest)
+		if err != nil {
+			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
+			return
+		}
+		//defer partitionConsumer.AsyncClose()
+
+		// 同步从每个分区消费信息  阻塞
+		for msg := range partitionConsumer.Messages() {
+			//log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
+
+			//msg.Value就是整张图片  丢给算法模块去处理  处理结果发到 kafka event_result
+
+			strresult := "已处理图片: offset="+strconv.FormatInt(msg.Offset, 10)+", size="+strconv.Itoa(len(msg.Value))
+			log.Printf(strresult)
+
+			// 转化成kafka消息
+			msgresult := &sarama.ProducerMessage{
+				Topic : "event_result",
+				Value : sarama.StringEncoder(strresult),
+			}
+
+
+			err = resultProducer(msgresult)
+			if err != nil {
+				log.Println("eventProducer struct failed:", err)
+				return
+			}
+		}
+	}
+	log.Println("============================================================")
+}
+
+
+// 获取struct => 获取image => 分析图片(每次最多16张, 事件间隔最长30秒) => 结果发送到kafka
+func eventHanderThreadInit() error {
+
+	go eventStructConsumerThread()
+	go eventImageConsumerThread()
+
+	return nil
 }
 
 func resultConsumerThreadInit() error {
@@ -105,7 +147,7 @@ func resultConsumerThreadInit() error {
 	wschan = make(chan []byte)
 	go wspolling()
 
-	partitionList, err := EventConsumer.Partitions("event_struct") // 根据topic取到所有的分区
+	partitionList, err := EventConsumer.Partitions("event_result") // 根据topic取到所有的分区
 	if err != nil {
 		log.Printf("fail to get list of partition:%v\n", err)
 	}
@@ -135,25 +177,48 @@ func resultConsumerThreadInit() error {
 func QueueMemberInit() error {
 	var err error
 
-	EventProducer, err = models.CreateProducer()
+	//详细的config参数:https://blog.csdn.net/chinawangfei/article/details/93097203
+	config := sarama.NewConfig()
+	//设置使用的kafka版本,如果低于V0_10_0_0版本,消息中的timestrap没有作用.需要消费和生产同时配置
+	//注意，版本设置不对的话，kafka会返回很奇怪的错误，并且无法成功发送消息
+	config.Version = sarama.V2_6_0_0
+
+	//============ Producer config ============
+	//随机向partition发送消息
+	config.Producer.Partitioner = sarama.NewRandomPartitioner
+	//等待服务器所有副本都保存成功后的响应 	发送完数据需要leader和follow都确认
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	//是否等待成功和失败后的响应,只有上面的RequireAcks设置不是NoReponse(默认)这里才有用. 成功交付的消息将在success channel返回
+	config.Producer.Return.Successes = true
+	config.Producer.Return.Errors = true
+	config.Producer.MaxMessageBytes = MAXMSGBYTES	// 保持默认
+
+	EventProducer, err = models.CreateProducer(*config)
 	if err != nil {
 		log.Println("NewSyncProducer", err)
 		return err
 	}
 
-	EventConsumer, err = models.CreateConsumer()
+	ResultProducer, err = models.CreateProducer(*config)
+	if err != nil {
+		log.Println("NewSyncProducer", err)
+		return err
+	}
+
+	//============ Consumer config ============
+	//接收失败通知
+	config.Consumer.Return.Errors = true
+	ResultConsumer, err = models.CreateConsumer(*config)
 	if err != nil {
 		log.Println("NewConsumer", err)
 		return err
 	}
 
-	ResultProducer, err = models.CreateProducer()
-	if err != nil {
-		log.Println("NewSyncProducer", err)
-		return err
-	}
 
-	ResultConsumer, err = models.CreateConsumer()
+	config.Consumer.Fetch.Max = 16
+	config.Consumer.Fetch.Min = 16
+	config.Consumer.MaxWaitTime = time.Second * 10
+	EventConsumer, err = models.CreateConsumer(*config)
 	if err != nil {
 		log.Println("NewConsumer", err)
 		return err
@@ -214,6 +279,21 @@ func wspolling() {
 	}
 }
 
+func resultProducer(msg *sarama.ProducerMessage) error {
+
+	//使用通道发送
+	ResultProducer.Input() <- msg
+	//循环判断哪个通道发送过来数据.
+	select {
+	case sucess := <-ResultProducer.Successes():
+		log.Println("offset: ", sucess.Offset, "timestamp: ", sucess.Timestamp.String(), "partitions: ", sucess.Partition)
+		return nil
+	case fail := <-ResultProducer.Errors():
+		log.Println("err: ", fail.Err)
+		return fail.Err
+	}
+}
+
 func eventProducer(msg *sarama.ProducerMessage) error {
 
 	//使用通道发送
@@ -229,10 +309,18 @@ func eventProducer(msg *sarama.ProducerMessage) error {
 	}
 }
 
+/*
+1. 通过web api post图片到服务器
+2. 服务器协程A接受 生成事件 推送到kafka 可以结构体丢topicA  图片丢topicB
+3. 服务器协程B从kafka topicAB取事件, 积攒16个或超时后, 调用C++库处理(先不搞C++ 模拟出来即可)
+4. 服务器从C++库得到处理结果,可能是异步回调方式,也可能是同步方式, 把结果推送到kafka topicC
+5. 服务器协程C从kafka topicC获取到结果, 通过webrtc主动推到前端
+*/
+
 func ImagePostHandler(ctx context.Context, img []byte) (*Status, error) {
 	rsp := &Status{Message: "已上传!"}
 
-	if len(img) > drivers.KafkaMqClient.Config().Producer.MaxMessageBytes {
+	if len(img) > MAXMSGBYTES {
 		rsp.Code = -1
 		rsp.Message = "图片过大!"
 		return rsp, nil
@@ -279,44 +367,6 @@ func ImagePostHandler(ctx context.Context, img []byte) (*Status, error) {
 
 	return rsp, nil
 }
-/*
-1. 通过web api post图片到服务器
-2. 服务器协程A接受 生成事件 推送到kafka 可以结构体丢topicA  图片丢topicB
-3. 服务器协程B从kafka topicAB取事件, 积攒16个或超时后, 调用C++库处理(先不搞C++ 模拟出来即可)
-4. 服务器从C++库得到处理结果,可能是异步回调方式,也可能是同步方式, 把结果推送到kafka topicC
-5. 服务器协程C从kafka topicC获取到结果, 通过webrtc主动推到前端
-*/
-func EventPublish(ctx context.Context, img []byte) (*Status, error) {
-	rsp := &Status{}
-
-	// 构造一个消息
-	msgstruct := &sarama.ProducerMessage{
-		Topic : "event_struct",
-		Value : sarama.StringEncoder("this is a test log"),
-	}
-
-	//使用通道发送
-	EventProducer.Input() <- msgstruct
-
-	timeStart := time.Now()
-	//循环判断哪个通道发送过来数据.
-	select {
-	case sucess := <-EventProducer.Successes():
-		log.Println("offset: ", sucess.Offset, "timestamp: ", sucess.Timestamp.String(), "partitions: ", sucess.Partition)
-		rsp.Code = 0
-		rsp.Message = "sucess"
-	case fail := <-EventProducer.Errors():
-		log.Println("err: ", fail.Err)
-		rsp.Code = -2
-		rsp.Message = "failed"
-	}
-
-	timeElapsed := time.Since(timeStart)
-	log.Println("发送消息到kafka后得到结果耗时:", timeElapsed)
-
-	return rsp, nil
-}
-
 
 // 通过websocket返回结果
 func EventResult(w http.ResponseWriter, r *http.Request) {

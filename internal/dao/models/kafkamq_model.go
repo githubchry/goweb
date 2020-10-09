@@ -22,10 +22,10 @@ func loopConsumer(consumer sarama.Consumer, topic string, partition int) {
 	}
 }
 
-func CreateProducer() (sarama.AsyncProducer, error) {
+func CreateProducer(config sarama.Config) (sarama.AsyncProducer, error) {
 
 	//使用配置,新建一个异步生产者
-	producer, err := sarama.NewAsyncProducerFromClient(drivers.KafkaMqClient)
+	producer, err := sarama.NewAsyncProducer(drivers.KafkaMqAddr, &config)
 	if err != nil {
 		log.Println("NewSyncProducer", err)
 	}
@@ -33,8 +33,8 @@ func CreateProducer() (sarama.AsyncProducer, error) {
 	return producer, err
 }
 
-func CreateConsumer() (sarama.Consumer, error) {
-	consumer, err := sarama.NewConsumerFromClient(drivers.KafkaMqClient)
+func CreateConsumer(config sarama.Config) (sarama.Consumer, error) {
+	consumer, err := sarama.NewConsumer(drivers.KafkaMqAddr, &config)
 	if err != nil {
 		log.Println("NewSyncProducer", err)
 	}

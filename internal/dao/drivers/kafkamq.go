@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-var KafkaMqClient sarama.Client
+var kafkaMqClient sarama.Client
+var KafkaMqAddr []string
 
 func KafkaMQInit(cfg configs.KafkaCfg) error {
 
@@ -19,26 +20,9 @@ func KafkaMQInit(cfg configs.KafkaCfg) error {
 	//注意，版本设置不对的话，kafka会返回很奇怪的错误，并且无法成功发送消息
 	config.Version = sarama.V2_6_0_0
 
-	//============ Producer config ============
-	//随机向partition发送消息
-	config.Producer.Partitioner = sarama.NewRandomPartitioner
-	//等待服务器所有副本都保存成功后的响应 	发送完数据需要leader和follow都确认
-	config.Producer.RequiredAcks = sarama.WaitForAll
-	//是否等待成功和失败后的响应,只有上面的RequireAcks设置不是NoReponse(默认)这里才有用. 成功交付的消息将在success channel返回
-	config.Producer.Return.Successes = true
-	config.Producer.Return.Errors = true
-
-
-	//============ Consumer config ============
-	//接收失败通知
-	config.Consumer.Return.Errors = true
-	config.Consumer.Fetch.Max = 16
-	config.Consumer.Fetch.Min = 16
-	config.Consumer.MaxWaitTime = time.Second * 10
-
-
+	KafkaMqAddr = []string{cfg.Addr+":"+strconv.Itoa(cfg.Port)}
 	var err error
-	KafkaMqClient, err = sarama.NewClient([]string{cfg.Addr+":"+strconv.Itoa(cfg.Port)}, config)
+	kafkaMqClient, err = sarama.NewClient(KafkaMqAddr, config)
 	if err != nil {
 		log.Fatal("create KafkaMq client failed:", err)
 	}
@@ -50,7 +34,7 @@ func KafkaMQInit(cfg configs.KafkaCfg) error {
 	}
 
 	//获取主题的名称集合
-	topics, err := KafkaMqClient.Topics()
+	topics, err := kafkaMqClient.Topics()
 	if err != nil {
 		log.Fatal("get topics err:", err)
 	}
@@ -60,7 +44,7 @@ func KafkaMQInit(cfg configs.KafkaCfg) error {
 	}
 
 	//获取broker集合
-	brokers := KafkaMqClient.Brokers()
+	brokers := kafkaMqClient.Brokers()
 	//输出每个机器的地址
 	for _, broker := range brokers {
 		log.Println(broker.Addr())
@@ -74,7 +58,7 @@ func KafkaMQExit() {
 
 	deleteTopics()
 
-	KafkaMqClient.Close()
+	kafkaMqClient.Close()
 }
 
 func createTopics() error {
@@ -82,7 +66,7 @@ func createTopics() error {
 	// 1.连接到Broker, 然后通过这个连接去创建Topic (很扯淡? Topic跟Broker之间不是包含关系, 但只需要理解, Broker只是提交创建Topic的请求到zookeeper, 真正创建的Topic的是zookeeper而不是其下的某一个Broker)
 	// [Kafka如何创建topic](https://www.cnblogs.com/warehouse/p/9534230.html)
 	// [Kafka解析之topic创建(1)](https://blog.csdn.net/u013256816/article/details/79303825)
-	broker, err := KafkaMqClient.Controller()
+	broker, err := kafkaMqClient.Controller()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,7 +77,7 @@ func createTopics() error {
 		log.Print(err.Error())
 		return err
 	}
-	log.Print("KafkaMqClient.Controller() connect result:", connected);
+	log.Print("kafkaMqClient.Controller() connect result:", connected);
 	//defer KafkaMqBroker.Close()
 
 	// 2.创建3个Topic, event_struct放结构体, 引用event_image放图片, event_status放处理结果
@@ -159,7 +143,7 @@ func deleteTopics() {
 		Topics: []string{topicEventStruct, topicEventImage, topicEventStatus, "event1"},
 	}
 
-	broker, err := KafkaMqClient.Controller()
+	broker, err := kafkaMqClient.Controller()
 	if err != nil {
 		log.Println(err)
 		return
