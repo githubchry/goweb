@@ -42,9 +42,12 @@ broker存储topic的数据(partition)。如果某topic有N个partition，集群�
 
 */
 const MAXMSGBYTES = 1000000
+
 var EventProducer sarama.AsyncProducer
-var EventConsumer sarama.Consumer
 var ResultProducer sarama.AsyncProducer
+
+var EventImageConsumer sarama.Consumer
+var EventStructConsumer sarama.Consumer
 var ResultConsumer sarama.Consumer
 
 var wslist []*websocket.Conn
@@ -55,7 +58,7 @@ var msgchan chan EventReq
 func eventStructConsumerThread() {
 	msgchan = make(chan EventReq, 100)
 
-	partitionList, err := EventConsumer.Partitions("event_struct") // 根据topic取到所有的分区
+	partitionList, err := EventStructConsumer.Partitions("event_struct") // 根据topic取到所有的分区
 	if err != nil {
 		log.Printf("fail to get list of partition:%v\n", err)
 	}
@@ -63,7 +66,7 @@ func eventStructConsumerThread() {
 	// partition号从0开始
 	for partition := range partitionList { // 遍历所有的分区
 		// 针对每个分区创建一个对应的分区消费者
-		partitionConsumer, err := EventConsumer.ConsumePartition("event_struct", int32(partition), sarama.OffsetNewest)
+		partitionConsumer, err := EventStructConsumer.ConsumePartition("event_struct", int32(partition), sarama.OffsetNewest)
 		if err != nil {
 			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
 			return
@@ -91,63 +94,44 @@ func eventStructConsumerThread() {
 
 func eventImageConsumerThread() {
 
-	partitionList, err := EventConsumer.Partitions("event_image") // 根据topic取到所有的分区
+	partitionConsumer, err := EventImageConsumer.ConsumePartition("event_image", int32(0), sarama.OffsetNewest)
 	if err != nil {
-		log.Printf("fail to get list of partition:%v\n", err)
+		log.Printf("failed to start consumer for partition %d,err:%v\n", 0, err)
+		return
 	}
+	defer partitionConsumer.Close()
 
-	// partition号从0开始
-	for partition := range partitionList { // 遍历所有的分区
-		// 针对每个分区创建一个对应的分区消费者
-		partitionConsumer, err := EventConsumer.ConsumePartition("event_image", int32(partition), sarama.OffsetNewest)
-		if err != nil {
-			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
-			return
+	// 同步从每个分区消费信息  阻塞
+	for msg := range partitionConsumer.Messages() {
+		//log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
+
+		//msg.Value就是整张图片  丢给算法模块去处理  处理结果发到 kafka event_result
+
+		strresult := "已处理图片: offset="+strconv.FormatInt(msg.Offset, 10)+", size="+strconv.Itoa(len(msg.Value))
+		log.Printf(strresult)
+
+		// 转化成kafka消息
+		msgresult := &sarama.ProducerMessage{
+			Topic : "event_result",
+			Value : sarama.StringEncoder(strresult),
 		}
-		//defer partitionConsumer.AsyncClose()
-
-		// 同步从每个分区消费信息  阻塞
-		for msg := range partitionConsumer.Messages() {
-			//log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
-
-			//msg.Value就是整张图片  丢给算法模块去处理  处理结果发到 kafka event_result
-
-			strresult := "已处理图片: offset="+strconv.FormatInt(msg.Offset, 10)+", size="+strconv.Itoa(len(msg.Value))
-			log.Printf(strresult)
-
-			// 转化成kafka消息
-			msgresult := &sarama.ProducerMessage{
-				Topic : "event_result",
-				Value : sarama.StringEncoder(strresult),
-			}
 
 
-			err = resultProducer(msgresult)
-			if err != nil {
-				log.Println("eventProducer struct failed:", err)
-				return
-			}
+		err = ProducerInput(ResultProducer, msgresult)
+		if err != nil {
+			log.Println("eventProducer struct failed:", err)
+			return
 		}
 	}
 	log.Println("============================================================")
 }
 
-
-// 获取struct => 获取image => 分析图片(每次最多16张, 事件间隔最长30秒) => 结果发送到kafka
-func eventHanderThreadInit() error {
-
-	go eventStructConsumerThread()
-	go eventImageConsumerThread()
-
-	return nil
-}
-
-func resultConsumerThreadInit() error {
+func resultConsumerThread() error {
 	// 创建事件结果消费线程
 	wschan = make(chan []byte)
 	go wspolling()
 
-	partitionList, err := EventConsumer.Partitions("event_result") // 根据topic取到所有的分区
+	partitionList, err := ResultConsumer.Partitions("event_result") // 根据topic取到所有的分区
 	if err != nil {
 		log.Printf("fail to get list of partition:%v\n", err)
 	}
@@ -155,7 +139,7 @@ func resultConsumerThreadInit() error {
 
 	for partition := range partitionList { // 遍历所有的分区
 		// 针对每个分区创建一个对应的分区消费者
-		partitionConsumer, err := EventConsumer.ConsumePartition("event_result", int32(partition), sarama.OffsetNewest)
+		partitionConsumer, err := ResultConsumer.ConsumePartition("event_result", int32(partition), sarama.OffsetNewest)
 		if err != nil {
 			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
 			return err
@@ -195,7 +179,7 @@ func QueueMemberInit() error {
 
 	EventProducer, err = models.CreateProducer(*config)
 	if err != nil {
-		log.Println("NewSyncProducer", err)
+		log.Println("EventProducer", err)
 		return err
 	}
 
@@ -214,11 +198,17 @@ func QueueMemberInit() error {
 		return err
 	}
 
+	EventStructConsumer, err = models.CreateConsumer(*config)
+	if err != nil {
+		log.Println("NewConsumer", err)
+		return err
+	}
+
 
 	config.Consumer.Fetch.Max = 16
 	config.Consumer.Fetch.Min = 16
 	config.Consumer.MaxWaitTime = time.Second * 10
-	EventConsumer, err = models.CreateConsumer(*config)
+	EventImageConsumer, err = models.CreateConsumer(*config)
 	if err != nil {
 		log.Println("NewConsumer", err)
 		return err
@@ -235,17 +225,9 @@ func EventQueueInit() error {
 		return err
 	}
 
-	err = eventHanderThreadInit()
-	if err != nil {
-		log.Println("eventHanderThreadInit", err)
-		return err
-	}
-
-	err = resultConsumerThreadInit()
-	if err != nil {
-		log.Println("eventConsumerThreadInit", err)
-		return err
-	}
+	go resultConsumerThread()
+	go eventStructConsumerThread()
+	go eventImageConsumerThread()
 
 	return err
 }
@@ -279,31 +261,16 @@ func wspolling() {
 	}
 }
 
-func resultProducer(msg *sarama.ProducerMessage) error {
+func ProducerInput(producer sarama.AsyncProducer, msg *sarama.ProducerMessage) error {
 
 	//使用通道发送
-	ResultProducer.Input() <- msg
+	producer.Input() <- msg
 	//循环判断哪个通道发送过来数据.
 	select {
-	case sucess := <-ResultProducer.Successes():
+	case sucess := <-producer.Successes():
 		log.Println("offset: ", sucess.Offset, "timestamp: ", sucess.Timestamp.String(), "partitions: ", sucess.Partition)
 		return nil
-	case fail := <-ResultProducer.Errors():
-		log.Println("err: ", fail.Err)
-		return fail.Err
-	}
-}
-
-func eventProducer(msg *sarama.ProducerMessage) error {
-
-	//使用通道发送
-	EventProducer.Input() <- msg
-	//循环判断哪个通道发送过来数据.
-	select {
-	case sucess := <-EventProducer.Successes():
-		log.Println("offset: ", sucess.Offset, "timestamp: ", sucess.Timestamp.String(), "partitions: ", sucess.Partition)
-		return nil
-	case fail := <-EventProducer.Errors():
+	case fail := <-producer.Errors():
 		log.Println("err: ", fail.Err)
 		return fail.Err
 	}
@@ -332,7 +299,7 @@ func ImagePostHandler(ctx context.Context, img []byte) (*Status, error) {
 		Value : sarama.ByteEncoder(img),
 	}
 
-	err := eventProducer(msgimage)
+	err := ProducerInput(EventProducer, msgimage)
 	if err != nil {
 		log.Println("eventProducer image failed:", err)
 		rsp.Code = -1
@@ -357,9 +324,9 @@ func ImagePostHandler(ctx context.Context, img []byte) (*Status, error) {
 		Value : sarama.ByteEncoder(data),
 	}
 
-	err = eventProducer(msgstruct)
+	err = ProducerInput(EventProducer, msgstruct)
 	if err != nil {
-		log.Println("eventProducer struct failed:", err)
+		log.Println("ProducerInput struct failed:", err)
 		rsp.Code = -2
 		rsp.Message = "fail"
 		return rsp, err
