@@ -56,10 +56,10 @@ var msgchan chan EventReq	// 暂时没啥卵用
 var imgchan chan []byte
 
 
-func eventStructConsumerThread() {
+func consumerThread(topic string, process func(msg *sarama.ConsumerMessage)) {
 	msgchan = make(chan EventReq, 16)
 
-	partitionList, err := EventStructConsumer.Partitions("event_struct") // 根据topic取到所有的分区
+	partitionList, err := EventStructConsumer.Partitions(topic) // 根据topic取到所有的分区
 	if err != nil {
 		log.Printf("fail to get list of partition:%v\n", err)
 	}
@@ -67,58 +67,43 @@ func eventStructConsumerThread() {
 	// partition号从0开始
 	for partition := range partitionList { // 遍历所有的分区
 		// 针对每个分区创建一个对应的分区消费者
-		partitionConsumer, err := EventStructConsumer.ConsumePartition("event_struct", int32(partition), sarama.OffsetNewest)
+		partitionConsumer, err := EventStructConsumer.ConsumePartition(topic, int32(partition), sarama.OffsetNewest)
 		if err != nil {
 			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
 			return
 		}
-		//defer partitionConsumer.AsyncClose()
+		defer partitionConsumer.AsyncClose()
 
 		// 异步从每个分区消费信息
-		go func(sarama.PartitionConsumer) {
+		func(sarama.PartitionConsumer) {
 			for msg := range partitionConsumer.Messages() {
 				//log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
-
-				//反序列化后 去获取image  ->chan
-				var req EventReq
-				err = proto.Unmarshal(msg.Value, &req)
-				if err != nil {
-					log.Printf("failed to Unmarshal proto:%v\n", err)
-					return
-				}
-				msgchan <- req
-
+				process(msg)
 			}
 		}(partitionConsumer)
 	}
 }
 
-func eventImageConsumerThread() {
-	imgchan = make(chan []byte, 16)
-
-	partitionList, err := EventStructConsumer.Partitions("event_image") // 根据topic取到所有的分区
+func eventStructConsumer(msg *sarama.ConsumerMessage) {
+	//反序列化后 去获取image  ->chan
+	var req EventReq
+	err := proto.Unmarshal(msg.Value, &req)
 	if err != nil {
-		log.Printf("fail to get list of partition:%v\n", err)
+		log.Printf("failed to Unmarshal proto:%v\n", err)
+		return
 	}
-
-	// partition号从0开始
-	for partition := range partitionList { // 遍历所有的分区
-		// 针对每个分区创建一个对应的分区消费者
-		partitionConsumer, err := EventStructConsumer.ConsumePartition("event_image", int32(partition), sarama.OffsetNewest)
-		if err != nil {
-			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
-			return
-		}
-		//defer partitionConsumer.AsyncClose()
-
-		// 异步从每个分区消费信息
-		go func(sarama.PartitionConsumer) {
-			for msg := range partitionConsumer.Messages() {
-				imgchan <- msg.Value
-			}
-		}(partitionConsumer)
-	}
+	msgchan <- req
 }
+
+func eventImageConsumer(msg *sarama.ConsumerMessage) {
+	imgchan <- msg.Value
+}
+
+func resultConsumer(msg *sarama.ConsumerMessage) {
+	// 把消息发送到websocket通道
+	wschan <- msg.Value
+}
+
 
 func eventHandle() {
 
@@ -172,37 +157,6 @@ func eventHandlerThread() {
 			}
 		}
 	}
-}
-
-func resultConsumerThread() error {
-	// 创建事件结果消费线程
-	wschan = make(chan []byte)
-	go wspolling()
-
-	partitionList, err := ResultConsumer.Partitions("event_result") // 根据topic取到所有的分区
-	if err != nil {
-		log.Printf("fail to get list of partition:%v\n", err)
-	}
-	log.Println(partitionList)
-
-	for partition := range partitionList { // 遍历所有的分区
-		// 针对每个分区创建一个对应的分区消费者
-		partitionConsumer, err := ResultConsumer.ConsumePartition("event_result", int32(partition), sarama.OffsetNewest)
-		if err != nil {
-			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
-			return err
-		}
-		//defer partitionConsumer.AsyncClose()
-		// 异步从每个分区消费信息
-		go func(sarama.PartitionConsumer) {
-			for msg := range partitionConsumer.Messages() {
-				//log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
-				// 把消息发送到websocket通道
-				wschan <- msg.Value
-			}
-		}(partitionConsumer)
-	}
-	return err
 }
 
 // 创建Queue的4个成员: 事件生产/消费者 结果消费/生产者
@@ -272,10 +226,16 @@ func EventQueueInit() error {
 		log.Println("QueueMemberInit", err)
 		return err
 	}
+	msgchan = make(chan EventReq, 16)
+	imgchan = make(chan []byte, 16)
+	// 创建事件结果消费线程
+	wschan = make(chan []byte)
+	go wspolling()
 
-	go resultConsumerThread()
-	go eventStructConsumerThread()
-	go eventImageConsumerThread()
+	go consumerThread("event_struct", eventStructConsumer)
+	go consumerThread("event_image", eventImageConsumer)
+	go consumerThread("event_result", resultConsumer)
+
 	go eventHandlerThread()
 	return err
 }
