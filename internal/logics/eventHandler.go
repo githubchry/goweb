@@ -52,11 +52,12 @@ var ResultConsumer sarama.Consumer
 
 var wslist []*websocket.Conn
 var wschan chan []byte
-var msgchan chan EventReq
+var msgchan chan EventReq	// 暂时没啥卵用
+var imgchan chan []byte
 
 
 func eventStructConsumerThread() {
-	msgchan = make(chan EventReq, 100)
+	msgchan = make(chan EventReq, 16)
 
 	partitionList, err := EventStructConsumer.Partitions("event_struct") // 根据topic取到所有的分区
 	if err != nil {
@@ -92,65 +93,82 @@ func eventStructConsumerThread() {
 	}
 }
 
-func eventImageConsumer(offset int64, msgnum int) error {
+func eventImageConsumerThread() {
+	imgchan = make(chan []byte, 16)
 
-	partitionConsumer, err := EventImageConsumer.ConsumePartition("event_image", int32(0), offset)
+	partitionList, err := EventStructConsumer.Partitions("event_image") // 根据topic取到所有的分区
 	if err != nil {
-		log.Printf("failed to start consumer for partition %d,err:%v\n", 0, err)
-		return err
+		log.Printf("fail to get list of partition:%v\n", err)
 	}
-	defer partitionConsumer.Close()
-	for i := 0; i < msgnum; i++ {
-		msg := <-partitionConsumer.Messages()
 
-		//msg.Value就是整张图片  丢给算法模块去处理  处理结果发到 kafka event_result
-
-		strresult := "已处理图片: offset="+strconv.FormatInt(msg.Offset, 10)+", size="+strconv.Itoa(len(msg.Value))
-		log.Printf(strresult)
-
-		// 转化成kafka消息
-		msgresult := &sarama.ProducerMessage{
-			Topic : "event_result",
-			Value : sarama.StringEncoder(strresult),
-		}
-
-		err = ProducerInput(ResultProducer, msgresult)
+	// partition号从0开始
+	for partition := range partitionList { // 遍历所有的分区
+		// 针对每个分区创建一个对应的分区消费者
+		partitionConsumer, err := EventStructConsumer.ConsumePartition("event_image", int32(partition), sarama.OffsetNewest)
 		if err != nil {
-			log.Println("eventProducer struct failed:", err)
-			return err
+			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
+			return
 		}
-	}
+		//defer partitionConsumer.AsyncClose()
 
-	return nil
+		// 异步从每个分区消费信息
+		go func(sarama.PartitionConsumer) {
+			for msg := range partitionConsumer.Messages() {
+				imgchan <- msg.Value
+			}
+		}(partitionConsumer)
+	}
 }
 
-func eventImageConsumerThread() {
+func eventHandle() {
+
+	for {
+		select {
+		case img := <- imgchan:
+			log.Printf("图片大小:%v\n", len(img))
+			strresult := "已处理图片: size="+strconv.Itoa(len(img))
+			log.Printf(strresult)
+
+			// 转化成kafka消息
+			msgresult := &sarama.ProducerMessage{
+				Topic : "event_result",
+				Value : sarama.StringEncoder(strresult),
+			}
+
+			err := ProducerInput(ResultProducer, msgresult)
+			if err != nil {
+				log.Println("eventProducer struct failed:", err)
+				return
+			}
+		default:
+			log.Println("=================该批次已处理完毕!=================")
+			return
+		}
+	}
+}
+
+func eventHandlerThread() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	msgnum := 0
-	var offset int64
 	for {
+		imgnum := len(imgchan)
 		select {
 		case <-ticker.C:
-			if msgnum > 0 {
-				log.Printf("单位时间内未囤满事件:%v/16\n", msgnum)
-				eventImageConsumer(offset, msgnum)
-				msgnum = 0
-				offset = 0
+			if imgnum > 0 {
+				log.Printf("单位时间内未囤满事件:%v/16\n", imgnum)
+				eventHandle()
+				imgnum = 0
 			}
 
 		case msg := <- msgchan:
-			msgnum++
-			if offset == 0 {
-				offset = msg.Offset
-			}
-
-			if msgnum >= 16 {
+			log.Printf("收到事件:%v\n", msg.Offset)
+		default:
+			if imgnum >= 16 {
 				log.Printf("单位时间内囤满16个事件\n")
-				eventImageConsumer(offset, msgnum)
-				msgnum = 0
-				offset = 0
+				eventHandle()
+				imgnum = 0
+				ticker.Reset(10 * time.Second)
 			}
 		}
 	}
@@ -258,7 +276,7 @@ func EventQueueInit() error {
 	go resultConsumerThread()
 	go eventStructConsumerThread()
 	go eventImageConsumerThread()
-
+	go eventHandlerThread()
 	return err
 }
 
