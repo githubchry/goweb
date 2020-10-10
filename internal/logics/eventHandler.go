@@ -76,7 +76,7 @@ func eventStructConsumerThread() {
 		// 异步从每个分区消费信息
 		go func(sarama.PartitionConsumer) {
 			for msg := range partitionConsumer.Messages() {
-				log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
+				//log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
 
 				//反序列化后 去获取image  ->chan
 				var req EventReq
@@ -92,18 +92,16 @@ func eventStructConsumerThread() {
 	}
 }
 
-func eventImageConsumerThread() {
+func eventImageConsumer(offset int64, msgnum int) error {
 
-	partitionConsumer, err := EventImageConsumer.ConsumePartition("event_image", int32(0), sarama.OffsetNewest)
+	partitionConsumer, err := EventImageConsumer.ConsumePartition("event_image", int32(0), offset)
 	if err != nil {
 		log.Printf("failed to start consumer for partition %d,err:%v\n", 0, err)
-		return
+		return err
 	}
 	defer partitionConsumer.Close()
-
-	// 同步从每个分区消费信息  阻塞
-	for msg := range partitionConsumer.Messages() {
-		//log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
+	for i := 0; i < msgnum; i++ {
+		msg := <-partitionConsumer.Messages()
 
 		//msg.Value就是整张图片  丢给算法模块去处理  处理结果发到 kafka event_result
 
@@ -116,14 +114,46 @@ func eventImageConsumerThread() {
 			Value : sarama.StringEncoder(strresult),
 		}
 
-
 		err = ProducerInput(ResultProducer, msgresult)
 		if err != nil {
 			log.Println("eventProducer struct failed:", err)
-			return
+			return err
 		}
 	}
-	log.Println("============================================================")
+
+	return nil
+}
+
+func eventImageConsumerThread() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	msgnum := 0
+	var offset int64
+	for {
+		select {
+		case <-ticker.C:
+			if msgnum > 0 {
+				log.Printf("单位时间内未囤满事件:%v/16\n", msgnum)
+				eventImageConsumer(offset, msgnum)
+				msgnum = 0
+				offset = 0
+			}
+
+		case msg := <- msgchan:
+			msgnum++
+			if offset == 0 {
+				offset = msg.Offset
+			}
+
+			if msgnum >= 16 {
+				log.Printf("单位时间内囤满16个事件\n")
+				eventImageConsumer(offset, msgnum)
+				msgnum = 0
+				offset = 0
+			}
+		}
+	}
 }
 
 func resultConsumerThread() error {
@@ -148,7 +178,7 @@ func resultConsumerThread() error {
 		// 异步从每个分区消费信息
 		go func(sarama.PartitionConsumer) {
 			for msg := range partitionConsumer.Messages() {
-				log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
+				//log.Printf("Partition:%d Offset:%d Key:%v Value:%v", msg.Partition, msg.Offset, msg.Key, msg.Value)
 				// 把消息发送到websocket通道
 				wschan <- msg.Value
 			}
@@ -205,9 +235,9 @@ func QueueMemberInit() error {
 	}
 
 
-	config.Consumer.Fetch.Max = 16
-	config.Consumer.Fetch.Min = 16
-	config.Consumer.MaxWaitTime = time.Second * 10
+	//config.Consumer.Fetch.Max = 16
+	//config.Consumer.Fetch.Min = 16
+	//config.Consumer.MaxWaitTime = time.Second * 10
 	EventImageConsumer, err = models.CreateConsumer(*config)
 	if err != nil {
 		log.Println("NewConsumer", err)
@@ -238,7 +268,7 @@ func wspolling() {
 		log.Println("websocket轮询线程")
 		select {
 		case msg := <-wschan:
-			log.Println("websocket轮询线程收到返回结果:", msg)
+			log.Println("websocket轮询线程收到事件处理结果:", string(msg))
 			// 轮询转发过程中移除已关闭的客户端 [slice移除算法出处](https://blog.csdn.net/liyunlong41/article/details/85132603)
 			idx := 0	// 记录下一个有效conn应该在的位置
 			for _, conn := range wslist{
