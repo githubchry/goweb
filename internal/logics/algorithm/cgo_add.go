@@ -8,7 +8,7 @@ int add(int a, int b) {
 */
 //#cgo CFLAGS: -I./number
 //#cgo LDFLAGS: -L${SRCDIR}/number -lnumber
-//
+// //编译时GCC会自动找到libnumber.a或libnumber.so进行链接
 //#include "number.h"
 import "C"
 

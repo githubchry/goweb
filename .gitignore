@@ -3,6 +3,8 @@
 *.exe~
 *.dll
 *.so
+*.a
+*.o
 *.dylib
 *.pb.go
 # Test binary, built with `go test -c`
