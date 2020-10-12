@@ -6,6 +6,10 @@ int add(int a, int b) {
     return a+b;
 }
 */
+//#cgo CFLAGS: -I./number
+//#cgo LDFLAGS: -L${SRCDIR}/number -lnumber
+//
+//#include "number.h"
 import "C"
 
 
@@ -13,4 +17,8 @@ import "C"
 
 func TestAdd(a int, b int) int {
 	return int(C.add(C.int(a), C.int(b)))
+}
+
+func TestAddMod(a int, b int, c int) int {
+	return int(C.number_add_mod(C.int(a), C.int(b), C.int(c)))
 }

@@ -112,7 +112,9 @@ func eventHandle() {
 			strresult := "已处理图片: size="+strconv.Itoa(len(img))
 			log.Printf(strresult)
 
-			log.Printf("测试CGO :%v\n", algorithm.TestAdd(2, 3))
+			log.Printf("测试CGO 源码:%v\n", algorithm.TestAdd(2, 3))
+			log.Printf("测试CGO 静态库:%v\n", algorithm.TestAddMod(2, 3, 2))
+
 			// 转化成kafka消息
 			msgresult := &sarama.ProducerMessage{
 				Topic : "event_result",
@@ -126,6 +128,7 @@ func eventHandle() {
 			}
 		default:
 			log.Println("=================该批次已处理完毕!=================")
+			// redis存放offset 解决断电期间漏处理的时间图片?
 			return
 		}
 	}
