@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/githubchry/goweb/internal/dao/models"
+	"github.com/githubchry/goweb/internal/logics/algorithm"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/gorilla/websocket"
@@ -111,6 +112,7 @@ func eventHandle() {
 			strresult := "已处理图片: size="+strconv.Itoa(len(img))
 			log.Printf(strresult)
 
+			log.Printf("测试CGO :%v\n", algorithm.TestAdd(2, 3))
 			// 转化成kafka消息
 			msgresult := &sarama.ProducerMessage{
 				Topic : "event_result",
