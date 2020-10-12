@@ -18,8 +18,6 @@
 </div>
 
 <p id="wsStatus">websocket未连接</p>
-<button type="button" name="cmdSendMsg" onclick="SendMsg();"> 发送 </button>
-<input type="text" id="sendmsg" /></br>
 接收到消息:<p id="wsRecv"> </p></br>
 <hr>
 
@@ -81,8 +79,11 @@
         var domain = document.domain; //获取主机名        例如：172.20.11.111
         var port = location.port; //获取端口号        例如：8000
         var host = location.host; //获取主机名:端口号 例如：172.20.11.111:8000
-
-        ws = new WebSocket("wss://" + host + "/api/eventResult");
+        if (window.location.protocol == 'https'){
+            ws = new WebSocket("wss://" + host + "/api/eventResult");
+        } else {
+            ws = new WebSocket("ws://" + host + "/api/eventResult");
+        }
         ws.onopen = function() {
             // Web Socket 已连接 ws.readyState = 1
             document.getElementById('wsStatus').innerText = "websocket已连接";

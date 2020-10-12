@@ -37,9 +37,6 @@ Kafka 集群包含一个或多个服务器，服务器节点称为broker。
 broker存储topic的数据(partition)。如果某topic有N个partition，集群有N个broker，那么每个broker存储该topic的一个partition。
 如果某topic有N个partition，集群有(N+M)个broker，那么其中有N个broker存储该topic的一个partition，剩下的M个broker不存储该topic的partition数据。
 如果某topic有N个partition，集群中broker数目少于N个，那么一个broker存储该topic的一个或多个partition。在实际生产环境中，尽量避免这种情况的发生，这种情况容易导致Kafka集群数据不均衡。
-
-
-
 */
 const MAXMSGBYTES = 1000000
 
@@ -61,7 +58,7 @@ func consumerThread(topic string, process func(msg *sarama.ConsumerMessage)) {
 
 	partitionList, err := EventStructConsumer.Partitions(topic) // 根据topic取到所有的分区
 	if err != nil {
-		log.Printf("fail to get list of partition:%v\n", err)
+		log.Printf("fail to get list of %v partition:%v\n", topic, err)
 	}
 
 	// partition号从0开始
@@ -69,7 +66,7 @@ func consumerThread(topic string, process func(msg *sarama.ConsumerMessage)) {
 		// 针对每个分区创建一个对应的分区消费者
 		partitionConsumer, err := EventStructConsumer.ConsumePartition(topic, int32(partition), sarama.OffsetNewest)
 		if err != nil {
-			log.Printf("failed to start consumer for partition %d,err:%v\n", partition, err)
+			log.Printf("failed to start consumer for %v partition %d,err:%v\n", topic, partition, err)
 			return
 		}
 		defer partitionConsumer.AsyncClose()

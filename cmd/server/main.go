@@ -133,7 +133,8 @@ func main() {
 	printAddr()
 
 	// 启动http服务
-	err = http.ListenAndServeTLS(":"+strconv.Itoa(httpport), certFileName, keyFileName, route)
+	//err = http.ListenAndServeTLS(":"+strconv.Itoa(httpport), certFileName, keyFileName, route)
+	err = http.ListenAndServe(":"+strconv.Itoa(httpport), route)
 	if err != nil {
 		log.Fatal(err)
 	}

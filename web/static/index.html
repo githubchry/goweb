@@ -145,8 +145,11 @@
         var domain = document.domain; //获取主机名        例如：172.20.11.111
         var port = location.port; //获取端口号        例如：8000
         var host = location.host; //获取主机名:端口号 例如：172.20.11.111:8000
-
-        ws = new WebSocket("wss://" + host + "/api/echo");
+        if (window.location.protocol == 'https'){
+            ws = new WebSocket("wss://" + host + "/api/echo");
+        } else {
+            ws = new WebSocket("ws://" + host + "/api/echo");
+        }
         ws.onopen = function() {
             // Web Socket 已连接 ws.readyState = 1
             document.getElementById('wsStatus').innerText = "websocket已连接";
