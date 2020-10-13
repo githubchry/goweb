@@ -113,7 +113,9 @@ func eventHandle() {
 			log.Printf(strresult)
 
 			log.Printf("测试CGO 源码:%v\n", algorithm.TestAdd(2, 3))
-			log.Printf("测试CGO 静态库:%v\n", algorithm.TestAddMod(2, 3, 2))
+			log.Printf("测试CGO 链接库:%v\n", algorithm.TestAddMod(2, 3, 2))
+
+			log.Printf("测试CGO 指针传递:%v\n", algorithm.TestSaveImg("hello.jpg", img))
 
 			// 转化成kafka消息
 			msgresult := &sarama.ProducerMessage{

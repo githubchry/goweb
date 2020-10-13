@@ -21,4 +21,6 @@ main
 *.key
 *.csr
 *.cer
+*.jpg
+*.png
 
