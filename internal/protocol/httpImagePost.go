@@ -1,8 +1,8 @@
 package protocol
 
 import (
+	"encoding/json"
 	"github.com/githubchry/goweb/internal/logics"
-	"github.com/golang/protobuf/proto"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -17,8 +17,13 @@ func HTTPImagePostHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("method:", r.Method, "buf len:", len(buf)) //获取请求的方法
 
 	rsp, _:= logics.ImagePostHandler(r.Context(), buf)
-	data, _ := proto.Marshal(rsp)
-	w.Write(data)
+
+
+	json_str, err := json.Marshal(rsp)
+	log.Printf("%s\n", json_str)
+
+
+	w.Write(json_str)
 }
 
 

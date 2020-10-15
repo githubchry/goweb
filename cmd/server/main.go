@@ -123,7 +123,8 @@ func main() {
 	route.HandleFunc("/settings/{username}", view.HTTPUserSettingPageHandler) // GET
 
 	route.HandleFunc("/api/eventResult", logics.EventResult) //WEBSOCKET
-	route.HandleFunc("/image/post", protocol.HTTPImagePostHandler) // GET
+	route.HandleFunc("/image/post", protocol.HTTPImagePostHandler)
+	route.HandleFunc("/person_detection", protocol.HTTPImagePostHandler)
 
 	route.PathPrefix("/proto").Handler(http.StripPrefix("/proto", http.FileServer(http.Dir("../proto"))))
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等

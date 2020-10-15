@@ -7,6 +7,8 @@
 *.o
 *.dylib
 *.pb.go
+*.pb.cc
+*.pb.h
 # Test binary, built with `go test -c`
 *.test
 
@@ -23,4 +25,6 @@ main
 *.cer
 *.jpg
 *.png
+
+3rdparty
 

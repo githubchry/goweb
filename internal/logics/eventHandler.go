@@ -1,13 +1,15 @@
 package logics
 
 import (
+	"bytes"
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/githubchry/goweb/internal/dao/models"
-	"github.com/githubchry/goweb/internal/logics/algorithm"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/gorilla/websocket"
+	"image"
+	_ "image/jpeg"
 	"log"
 	"net/http"
 	"strconv"
@@ -112,10 +114,19 @@ func eventHandle() {
 			strresult := "已处理图片: size="+strconv.Itoa(len(img))
 			log.Printf(strresult)
 
-			log.Printf("测试CGO 源码:%v\n", algorithm.TestAdd(2, 3))
-			log.Printf("测试CGO 链接库:%v\n", algorithm.TestAddMod(2, 3, 2))
 
-			log.Printf("测试CGO 指针传递:%v\n", algorithm.TestSaveImg("hello.jpg", img))
+			im, _, err := image.DecodeConfig(bytes.NewReader(img))
+			if err != nil {
+				log.Println("image DecodeConfig failed:", err)
+				return
+			}
+
+			log.Printf("图片 width:%v height:%v ColorModel:%v\n", im.Width, im.Height, im.ColorModel)
+
+			log.Printf("测试CGO 源码:%v\n", TestAdd(2, 3))
+			log.Printf("测试CGO 链接库:%v\n", TestAddMod(2, 3, 2))
+
+			log.Printf("测试CGO 指针传递:%v\n", TestSaveImg("hello.jpg", img))
 
 			// 转化成kafka消息
 			msgresult := &sarama.ProducerMessage{
@@ -123,7 +134,7 @@ func eventHandle() {
 				Value : sarama.StringEncoder(strresult),
 			}
 
-			err := ProducerInput(ResultProducer, msgresult)
+			err = ProducerInput(ResultProducer, msgresult)
 			if err != nil {
 				log.Println("eventProducer struct failed:", err)
 				return
@@ -296,14 +307,16 @@ func ProducerInput(producer sarama.AsyncProducer, msg *sarama.ProducerMessage) e
 5. 服务器协程C从kafka topicC获取到结果, 通过webrtc主动推到前端
 */
 
-func ImagePostHandler(ctx context.Context, img []byte) (*Status, error) {
-	rsp := &Status{Message: "已上传!"}
+func ImagePostHandler(ctx context.Context, img []byte) (*AlgorithmOutput, error) {
+	rsp := &AlgorithmOutput{Message: "已上传!"}
+
 
 	if len(img) > MAXMSGBYTES {
 		rsp.Code = -1
 		rsp.Message = "图片过大!"
 		return rsp, nil
 	}
+
 
 	// 先发送image, 然后发送struct
 	msgimage := &sarama.ProducerMessage{
@@ -343,6 +356,34 @@ func ImagePostHandler(ctx context.Context, img []byte) (*Status, error) {
 		rsp.Message = "fail"
 		return rsp, err
 	}
+
+	rsp.Targets = []*TorchObject {
+		{
+			X: 113,
+			Y: 166,
+			W: 226,
+			H: 462,
+			Conf: 99,
+			Label: "person",
+		},
+		{
+			X: 1143,
+			Y: 166,
+			W: 183,
+			H: 481,
+			Conf: 99,
+			Label: "person",
+		},
+	}
+
+	var input AlgorithmInput
+	input.Image = [][]byte{
+		0: img,
+	}
+
+	output := PersonDetection(&input)
+	log.Printf("测试CGO cpp:%v\n", output)
+
 
 	return rsp, nil
 }
