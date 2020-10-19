@@ -11,7 +11,7 @@ import (
 	"unsafe"
 )
 
-func PersonDetection(input *AlgorithmInput) *AlgorithmOutput {
+func PersonDetection(input *PersonDetectionInput) *PersonDetectionOutput {
 
 	//把logics.UserLoginRsp结构体转成protobuf二进制数据
 	indata, _ := proto.Marshal(input)
@@ -25,7 +25,7 @@ func PersonDetection(input *AlgorithmInput) *AlgorithmOutput {
 
 	log.Println("return protobuf:", ret)
 
-	var output AlgorithmOutput
+	var output PersonDetectionOutput
 	if err := proto.Unmarshal(outdata, &output); err != nil {
 		log.Println("Failed to parse protobuf:", err)
 		return nil

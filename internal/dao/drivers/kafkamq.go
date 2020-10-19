@@ -80,14 +80,7 @@ func createTopics() error {
 	log.Print("kafkaMqClient.Controller() connect result:", connected);
 	//defer KafkaMqBroker.Close()
 
-	// 2.创建3个Topic, event_struct放结构体, 引用event_image放图片, event_status放处理结果
-	topicEventStruct := "event_struct"
-	topicEventStructDetail := &sarama.TopicDetail{}
-	topicEventStructDetail.NumPartitions = int32(1)		//分区数
-	topicEventStructDetail.ReplicationFactor = int16(1)	//副本数
-	//config参数集可以用来设置topic级别的配置以覆盖默认配置。如果创建的topic再现有的集群中存在，那么会报出异常：TopicExistsException，如果创建的时候带了if-not-exists参数，那么发现topic冲突的时候可以不做任何处理
-	topicEventStructDetail.ConfigEntries = make(map[string]*string)
-
+	// 2.创建2个Topic, event_image放图片, event_status放处理结果
 	topicEventImage := "event_image"
 	topicEventImageDetail := &sarama.TopicDetail{}
 	topicEventImageDetail.NumPartitions = int32(1)
@@ -101,7 +94,6 @@ func createTopics() error {
 	topicEventStatusDetail.ConfigEntries = make(map[string]*string)
 
 	topicDetails := make(map[string]*sarama.TopicDetail)
-	topicDetails[topicEventStruct] = topicEventStructDetail
 	topicDetails[topicEventImage] = topicEventImageDetail
 	topicDetails[topicEventStatus] = topicEventStatusDetail
 
@@ -133,14 +125,13 @@ func createTopics() error {
 }
 
 func deleteTopics() {
-	topicEventStruct := "event_struct"
 	topicEventImage  := "event_image"
 	topicEventStatus := "event_result"
 
 	// 创建删除请求
 	request := sarama.DeleteTopicsRequest{
 		Timeout:	time.Second * 15,
-		Topics: []string{topicEventStruct, topicEventImage, topicEventStatus, "event1"},
+		Topics: []string{topicEventImage, topicEventStatus},
 	}
 
 	broker, err := kafkaMqClient.Controller()

@@ -196,7 +196,7 @@ docker run -d --name zookeeper --publish 2181:2181  wurstmeister/zookeeper
 docker run -d --name kafka --publish 9092:9092 \
 --link zookeeper \
 --env KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
---env KAFKA_ADVERTISED_HOST_NAME=10.11.5.90 \
+--env KAFKA_ADVERTISED_HOST_NAME=192.168.50.16 \
 --env KAFKA_ADVERTISED_PORT=9092 \
 wurstmeister/kafka
 

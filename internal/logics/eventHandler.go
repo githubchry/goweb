@@ -5,7 +5,6 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/githubchry/goweb/internal/dao/models"
-	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"image"
 	_ "image/jpeg"
@@ -42,11 +41,10 @@ broker存储topic的数据(partition)。如果某topic有N个partition，集群�
 */
 const MAXMSGBYTES = 1000000
 
-var EventProducer sarama.AsyncProducer
+var ImageProducer sarama.AsyncProducer
 var ResultProducer sarama.AsyncProducer
 
-var EventImageConsumer sarama.Consumer
-var EventStructConsumer sarama.Consumer
+var ImageConsumer sarama.Consumer
 var ResultConsumer sarama.Consumer
 
 var wslist []*websocket.Conn
@@ -58,7 +56,7 @@ var imgchan chan []byte
 func consumerThread(topic string, process func(msg *sarama.ConsumerMessage)) {
 	msgchan = make(chan EventReq, 16)
 
-	partitionList, err := EventStructConsumer.Partitions(topic) // 根据topic取到所有的分区
+	partitionList, err := ImageConsumer.Partitions(topic) // 根据topic取到所有的分区
 	if err != nil {
 		log.Printf("fail to get list of %v partition:%v\n", topic, err)
 	}
@@ -66,7 +64,7 @@ func consumerThread(topic string, process func(msg *sarama.ConsumerMessage)) {
 	// partition号从0开始
 	for partition := range partitionList { // 遍历所有的分区
 		// 针对每个分区创建一个对应的分区消费者
-		partitionConsumer, err := EventStructConsumer.ConsumePartition(topic, int32(partition), sarama.OffsetNewest)
+		partitionConsumer, err := ImageConsumer.ConsumePartition(topic, int32(partition), sarama.OffsetNewest)
 		if err != nil {
 			log.Printf("failed to start consumer for %v partition %d,err:%v\n", topic, partition, err)
 			return
@@ -83,18 +81,7 @@ func consumerThread(topic string, process func(msg *sarama.ConsumerMessage)) {
 	}
 }
 
-func eventStructConsumer(msg *sarama.ConsumerMessage) {
-	//反序列化后 去获取image  ->chan
-	var req EventReq
-	err := proto.Unmarshal(msg.Value, &req)
-	if err != nil {
-		log.Printf("failed to Unmarshal proto:%v\n", err)
-		return
-	}
-	msgchan <- req
-}
-
-func eventImageConsumer(msg *sarama.ConsumerMessage) {
+func imageConsumer(msg *sarama.ConsumerMessage) {
 	imgchan <- msg.Value
 }
 
@@ -193,9 +180,9 @@ func QueueMemberInit() error {
 	config.Producer.Return.Errors = true
 	config.Producer.MaxMessageBytes = MAXMSGBYTES	// 保持默认
 
-	EventProducer, err = models.CreateProducer(*config)
+	ImageProducer, err = models.CreateProducer(*config)
 	if err != nil {
-		log.Println("EventProducer", err)
+		log.Println("ImageProducer", err)
 		return err
 	}
 
@@ -214,17 +201,10 @@ func QueueMemberInit() error {
 		return err
 	}
 
-	EventStructConsumer, err = models.CreateConsumer(*config)
-	if err != nil {
-		log.Println("NewConsumer", err)
-		return err
-	}
-
-
 	//config.Consumer.Fetch.Max = 16
 	//config.Consumer.Fetch.Min = 16
 	//config.Consumer.MaxWaitTime = time.Second * 10
-	EventImageConsumer, err = models.CreateConsumer(*config)
+	ImageConsumer, err = models.CreateConsumer(*config)
 	if err != nil {
 		log.Println("NewConsumer", err)
 		return err
@@ -246,8 +226,7 @@ func EventQueueInit() error {
 	wschan = make(chan []byte)
 	go wspolling()
 
-	go consumerThread("event_struct", eventStructConsumer)
-	go consumerThread("event_image", eventImageConsumer)
+	go consumerThread("event_image", imageConsumer)
 	go consumerThread("event_result", resultConsumer)
 
 	go eventHandlerThread()
@@ -305,27 +284,49 @@ func ProducerInput(producer sarama.AsyncProducer, msg *sarama.ProducerMessage) (
 5. 服务器协程C从kafka topicC获取到结果, 通过webrtc主动推到前端
 */
 
-func ImagePostHandler(ctx context.Context, req *AlgorithmInput) (*AlgorithmOutput, error) {
-	rsp := &AlgorithmOutput{Message: "已上传!"}
+func ImagePostHandler(ctx context.Context, img []byte) (*PersonDetectionRsp, error) {
 
-	data, _ := proto.Marshal(req)
+	if len(img) > MAXMSGBYTES {
+		log.Printf("图片过大!!")
+
+		rsp := &PersonDetectionRsp{
+			Code: -1,
+			Message: "图片过大!",
+		}
+		return rsp, nil
+	}
 
 	// 先发送image, 然后发送struct
 	msgimage := &sarama.ProducerMessage{
 		Topic : "event_image",
-		Value : sarama.ByteEncoder(data),
+		Value : sarama.ByteEncoder(img),
 	}
 
-	_, err := ProducerInput(EventProducer, msgimage)
+	_, err := ProducerInput(ImageProducer, msgimage)
 	if err != nil {
 		log.Println("eventProducer image failed:", err)
-		rsp.Code = -1
-		rsp.Message = "fail"
+		rsp := &PersonDetectionRsp{
+			Code: -2,
+			Message: "推送图片到队列失败!",
+		}
 		return rsp, err
 	}
 
-	// 后续处理结果根据offset进行对应识别
+	// 创建通道等待分析结果
+	var rsp PersonDetectionRsp
+	retchan := make(chan PersonDetectionRsp)
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
+	select {
+	case <-ticker.C:
+		log.Println("等待分析结果超时!")
+
+	case rsp = <- retchan:
+		log.Printf("收到分析结果:%v\n", len(rsp.Targets))
+	}
+
+	// 后续处理结果根据offset进行对应识别
 	rsp.Targets = []*TorchObject {
 		{
 			X: 113,
@@ -345,13 +346,7 @@ func ImagePostHandler(ctx context.Context, req *AlgorithmInput) (*AlgorithmOutpu
 		},
 	}
 
-	var input AlgorithmInput
-
-	output := PersonDetection(&input)
-	log.Printf("测试CGO cpp:%v\n", output)
-
-
-	return rsp, nil
+	return &rsp, nil
 }
 
 // 通过websocket返回结果
