@@ -13,8 +13,23 @@ option go_package = "../internal/logics";
 //protoc --go_out=plugins=grpc:.  --cpp_out=. algorithm.proto
 
 
+message ImageFile {
+  enum FileType {
+    option allow_alias = true;  //可以通过为不同的枚举常量指定相同的值来定义别名(alias)
+    FILE_TYPE_UNKNOW = 0;
+    FILE_TYPE_ERROR = 0;
+    //枚举默认为第一个枚举定义的第一个值，必须是0，且为无效值，所有有意义的值请不要定义成0值
+    //-------------------------------------------
+    FILE_TYPE_JPG = 1;
+    FILE_TYPE_PNG = 2;
+  }
+
+  bytes data= 1;
+  FileType type= 2;
+}
+
 message AlgorithmInput {
-  repeated bytes image= 1;
+  repeated ImageFile images= 1;
 }
 
 message TorchObject {
@@ -28,4 +43,6 @@ message TorchObject {
 
 message AlgorithmOutput {
   repeated TorchObject targets= 1;
+  int32 code = 2;
+  string message = 3;
 }

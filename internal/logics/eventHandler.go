@@ -6,7 +6,6 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/githubchry/goweb/internal/dao/models"
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/gorilla/websocket"
 	"image"
 	_ "image/jpeg"
@@ -134,7 +133,7 @@ func eventHandle() {
 				Value : sarama.StringEncoder(strresult),
 			}
 
-			err = ProducerInput(ResultProducer, msgresult)
+			_, err = ProducerInput(ResultProducer, msgresult)
 			if err != nil {
 				log.Println("eventProducer struct failed:", err)
 				return
@@ -284,18 +283,17 @@ func wspolling() {
 	}
 }
 
-func ProducerInput(producer sarama.AsyncProducer, msg *sarama.ProducerMessage) error {
-
+func ProducerInput(producer sarama.AsyncProducer, msg *sarama.ProducerMessage) (int64, error) {
 	//使用通道发送
 	producer.Input() <- msg
 	//循环判断哪个通道发送过来数据.
 	select {
 	case sucess := <-producer.Successes():
 		log.Println("offset: ", sucess.Offset, "timestamp: ", sucess.Timestamp.String(), "partitions: ", sucess.Partition)
-		return nil
+		return sucess.Offset, nil
 	case fail := <-producer.Errors():
 		log.Println("err: ", fail.Err)
-		return fail.Err
+		return -1, fail.Err
 	}
 }
 
@@ -307,24 +305,18 @@ func ProducerInput(producer sarama.AsyncProducer, msg *sarama.ProducerMessage) e
 5. 服务器协程C从kafka topicC获取到结果, 通过webrtc主动推到前端
 */
 
-func ImagePostHandler(ctx context.Context, img []byte) (*AlgorithmOutput, error) {
+func ImagePostHandler(ctx context.Context, req *AlgorithmInput) (*AlgorithmOutput, error) {
 	rsp := &AlgorithmOutput{Message: "已上传!"}
 
-
-	if len(img) > MAXMSGBYTES {
-		rsp.Code = -1
-		rsp.Message = "图片过大!"
-		return rsp, nil
-	}
-
+	data, _ := proto.Marshal(req)
 
 	// 先发送image, 然后发送struct
 	msgimage := &sarama.ProducerMessage{
 		Topic : "event_image",
-		Value : sarama.ByteEncoder(img),
+		Value : sarama.ByteEncoder(data),
 	}
 
-	err := ProducerInput(EventProducer, msgimage)
+	_, err := ProducerInput(EventProducer, msgimage)
 	if err != nil {
 		log.Println("eventProducer image failed:", err)
 		rsp.Code = -1
@@ -332,30 +324,7 @@ func ImagePostHandler(ctx context.Context, img []byte) (*AlgorithmOutput, error)
 		return rsp, err
 	}
 
-	// 随便构造一个报警消息
-	event := &EventReq{
-		Time: ptypes.TimestampNow(),
-		Type: EventReq_EVENT_TYPE_SUSPECT,
-		Addr: "192.168.1.99",
-		Token: "",
-		Imgurl: "",
-		Offset: msgimage.Offset,
-	}
-	data, _ := proto.Marshal(event)
-
-	// 转化成kafka消息
-	msgstruct := &sarama.ProducerMessage{
-		Topic : "event_struct",
-		Value : sarama.ByteEncoder(data),
-	}
-
-	err = ProducerInput(EventProducer, msgstruct)
-	if err != nil {
-		log.Println("ProducerInput struct failed:", err)
-		rsp.Code = -2
-		rsp.Message = "fail"
-		return rsp, err
-	}
+	// 后续处理结果根据offset进行对应识别
 
 	rsp.Targets = []*TorchObject {
 		{
@@ -377,9 +346,6 @@ func ImagePostHandler(ctx context.Context, img []byte) (*AlgorithmOutput, error)
 	}
 
 	var input AlgorithmInput
-	input.Image = [][]byte{
-		0: img,
-	}
 
 	output := PersonDetection(&input)
 	log.Printf("测试CGO cpp:%v\n", output)

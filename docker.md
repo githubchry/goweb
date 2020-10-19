@@ -51,3 +51,18 @@ docker restart minio-chry
 docker kill minio-chry
 
 ```
+/mnt/e/temp/minio/algorithm:/mnt
+
+docker run  -itd --gpus all -p 8080:8080 72439a283e79
+docker run  -itd -p 8080:8080 --name algorithm-cpu -d -v /mnt/e/temp/algorithm/mnt:/mnt 72439a283e79
+
+进入后台
+docker exec -it algorithm-cpu /bin/bash
+
+export GOROOT=/usr/local/go
+export PATH=$PATH:$GOROOT/bin
+go env -w GOPROXY=https://goproxy.cn,direct
+go env -w GOPATH=/mnt/gopath
+
+cd /mnt/goweb/internal/logics/algorithm/person_detection
+gcc -c person_detection.cpp person_detection_wrapper.cpp algorithm.pb.cc -I/mnt/new-root/usr/local/include

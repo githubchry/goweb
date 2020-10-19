@@ -185,6 +185,8 @@ db.auth('chry','chry')
 
 [《KAFKA官方文档》入门指南](http://ifeve.com/kafka-1/)
 
+[kafka跨网段和外网访问](https://segmentfault.com/a/1190000020715650)
+
 Docker Compose是一个用来定义和运行复杂应用的Docker工具。一个使用Docker容器的应用，通常由多个容器组成。使用Docker Compose不再需要使用shell脚本来启动容器。 
 Compose 通过一个配置文件来管理多个Docker容器，在配置文件中，所有的容器通过services来定义，然后使用docker-compose脚本来启动，停止和重启应用，和应用中的服务以及所有依赖服务的容器，非常适合组合使用多个容器进行开发的场景。
 
@@ -194,10 +196,12 @@ docker run -d --name zookeeper --publish 2181:2181  wurstmeister/zookeeper
 docker run -d --name kafka --publish 9092:9092 \
 --link zookeeper \
 --env KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
---env KAFKA_ADVERTISED_HOST_NAME=127.0.0.1 \
+--env KAFKA_ADVERTISED_HOST_NAME=10.11.5.90 \
 --env KAFKA_ADVERTISED_PORT=9092 \
 wurstmeister/kafka
 
+
+// 注意上面的KAFKA_ADVERTISED_HOST_NAME, 在跨IP的情况下不要填127.0.0.1
 ```
 于是可以通过docker-compose直接把这两个容器管理起来:
 
@@ -214,7 +218,7 @@ services:
     ports:
       - "9092:9092"
     environment:
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://10.11.5.90:9092
       KAFKA_LISTENERS: PLAINTEXT://:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
     volumes:
