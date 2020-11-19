@@ -2,6 +2,7 @@ package logics
 
 import (
 	"github.com/githubchry/goweb/internal/dao/models"
+	"github.com/githubchry/goweb/internal/logics/protos"
 	"github.com/satori/go.uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"log"
@@ -10,13 +11,13 @@ import (
 
 // [golang jwt-go的使用](https://www.cnblogs.com/jianga/p/12487267.html)
 // [使用JWT进行接口认证](https://studygolang.com/articles/27242?fr=sidebar)
-func UserLogin(req *UserLoginReq) UserLoginRsp {
+func UserLogin(req *protos.UserLoginReq) protos.UserLoginRsp {
 
 	// 查询用户名是否已存在
-	var result User
+	var result protos.User
 	models.NewMgo().FindOne("username", req.Username).Decode(&result)
 
-	var rsp UserLoginRsp
+	var rsp protos.UserLoginRsp
 
 	if result.Password == req.Password {
 		rsp.Token = TokenGenerate(result.Username)
@@ -34,7 +35,7 @@ func UserLogin(req *UserLoginReq) UserLoginRsp {
 	return rsp
 }
 
-func UserLogout(req *UserLogoutReq) {
+func UserLogout(req *protos.UserLogoutReq) {
 
 	log.Println(req)
 	// 从redis查询token
@@ -52,21 +53,21 @@ func UserLogout(req *UserLogoutReq) {
 	return
 }
 
-func UserRegister(req *UserRegisterReq) Status {
+func UserRegister(req *protos.UserRegisterReq) protos.Status {
 
 	// 打印请求数据
 	log.Println("post req: ", req.Username, req.Password, req.Email)
 
 	// 操作mongodb
 	// 返回结果
-	var rsp Status
+	var rsp protos.Status
 
 	// 删除
 	//deleteResult := models.NewMgo().DeleteMany("username", req.Username)
 	//fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult)
 
 	// 查询用户名是否已存在
-	var result User
+	var result protos.User
 	models.NewMgo().FindOne("username", req.Username).Decode(&result)
 	if len(result.Username) > 0 {
 		// 用户名已注册
@@ -85,11 +86,11 @@ func UserRegister(req *UserRegisterReq) Status {
 	return rsp
 }
 
-func UserSetPhoto(req *UserSetPhotoReq) Status {
+func UserSetPhoto(req *protos.UserSetPhotoReq) protos.Status {
 
-	var userRsp Status
+	var userRsp protos.Status
 	// 查询用户名是否已存在
-	var result User
+	var result protos.User
 	_ = models.NewMgo().FindOne("username", req.Username).Decode(&result)
 	if len(result.Username) <= 0 {
 		// 用户名不存在
@@ -116,12 +117,12 @@ func UserSetPhoto(req *UserSetPhotoReq) Status {
 	return userRsp
 }
 
-func UserSetPassword(req *UserSetPasswordReq) Status {
+func UserSetPassword(req *protos.UserSetPasswordReq) protos.Status {
 
 	log.Println(req)
 	// 查询用户名是否已存在
-	var result User
-	var userRsp Status
+	var result protos.User
+	var userRsp protos.Status
 	models.NewMgo().FindOne("username", req.Username).Decode(&result)
 	if len(result.Username) <= 0 {
 		// 用户名不存在

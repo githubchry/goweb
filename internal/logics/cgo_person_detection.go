@@ -1,17 +1,18 @@
 package logics
 
-//#cgo CFLAGS: -I./algorithm/person_detection
-//#cgo LDFLAGS: -L./algorithm/person_detection -lperson_detection -L./algorithm/3rdparty/lib -lprotobuf -lstdc++
+//#cgo CFLAGS: -I${SRCDIR}/../../cgo
+//#cgo LDFLAGS: -L${SRCDIR}/../../cgo/person_detection -lperson_detection -L${SRCDIR}/../../cgo/3rdparty/lib -lprotobuf -lstdc++
 // //编译时GCC会自动找到libnumber.a或libnumber.so进行链接
-//#include "algorithm/person_detection/person_detection.h"
+//#include <person_detection/person_detection.h>
 import "C"
 import (
+	"github.com/githubchry/goweb/internal/logics/protos"
 	"github.com/golang/protobuf/proto"
 	"log"
 	"unsafe"
 )
 
-func PersonDetection(input *PersonDetectionInput) *PersonDetectionOutput {
+func PersonDetection(input *protos.PersonDetectionInput) *protos.PersonDetectionOutput {
 
 	//把logics.UserLoginRsp结构体转成protobuf二进制数据
 	indata, _ := proto.Marshal(input)
@@ -25,7 +26,7 @@ func PersonDetection(input *PersonDetectionInput) *PersonDetectionOutput {
 
 	log.Println("return protobuf:", ret)
 
-	var output PersonDetectionOutput
+	var output protos.PersonDetectionOutput
 	if err := proto.Unmarshal(outdata, &output); err != nil {
 		log.Println("Failed to parse protobuf:", err)
 		return nil

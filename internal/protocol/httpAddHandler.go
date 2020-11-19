@@ -2,7 +2,7 @@ package protocol
 
 import (
 	"github.com/githubchry/goweb/internal/controller"
-	"github.com/githubchry/goweb/internal/logics"
+	"github.com/githubchry/goweb/internal/logics/protos"
 	"github.com/golang/protobuf/proto"
 	"io/ioutil"
 	"log"
@@ -13,7 +13,7 @@ import (
 
 func HTTPAddHandler(w http.ResponseWriter, r *http.Request) {
 
-	req := &logics.AddReq{}
+	req := &protos.AddReq{}
 	if r.Method == "POST" {
 		//把protobuf二进制数据转成logics.UserLoginReq结构体
 		data, _ := ioutil.ReadAll(r.Body)

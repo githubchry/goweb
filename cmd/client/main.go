@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"github.com/githubchry/goweb/internal/logics"
+	"github.com/githubchry/goweb/internal/logics/protos"
 	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -32,12 +32,12 @@ func main() {
 	defer conn.Close()
 
 	// 模拟报警事件上传
-	client := logics.NewEventUploadClient(conn)
-	event := &logics.EventReq{
-		Time: ptypes.TimestampNow(),
-		Type: logics.EventReq_EVENT_TYPE_SUSPECT,
-		Addr: "192.168.1.99",
-		Token: "",
+	client := protos.NewEventUploadClient(conn)
+	event := &protos.EventReq{
+		Time:   ptypes.TimestampNow(),
+		Type:   protos.EventReq_EVENT_TYPE_SUSPECT,
+		Addr:   "192.168.1.99",
+		Token:  "",
 		Imgurl: "",
 	}
 

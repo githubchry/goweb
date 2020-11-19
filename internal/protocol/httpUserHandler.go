@@ -2,7 +2,7 @@ package protocol
 
 import (
 	"github.com/githubchry/goweb/internal/controller"
-	"github.com/githubchry/goweb/internal/logics"
+	"github.com/githubchry/goweb/internal/logics/protos"
 	"github.com/golang/protobuf/proto"
 	"io/ioutil"
 	"log"
@@ -11,7 +11,7 @@ import (
 
 func HTTPUserLoginHandler(w http.ResponseWriter, r *http.Request) {
 
-	req := &logics.UserLoginReq{}
+	req := &protos.UserLoginReq{}
 
 	//把protobuf二进制数据转成logics.UserLoginReq结构体
 	data, _ := ioutil.ReadAll(r.Body)
@@ -29,7 +29,7 @@ func HTTPUserLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 func HTTPUserLogoutHandler(w http.ResponseWriter, r *http.Request) {
 
-	req := &logics.UserLogoutReq{}
+	req := &protos.UserLogoutReq{}
 
 	//把protobuf二进制数据转成logics.UserLoginReq结构体
 	data, _ := ioutil.ReadAll(r.Body)
@@ -43,7 +43,7 @@ func HTTPUserLogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 func HTTPUserRegisterHandler(w http.ResponseWriter, r *http.Request) {
 
-	req := &logics.UserRegisterReq{}
+	req := &protos.UserRegisterReq{}
 
 	//把protobuf二进制数据转成logics.UserLoginReq结构体
 	data, _ := ioutil.ReadAll(r.Body)
@@ -59,7 +59,7 @@ func HTTPUserRegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 func HTTPUserSetPhotoHandler(w http.ResponseWriter, r *http.Request) {
 
-	req := &logics.UserSetPhotoReq{}
+	req := &protos.UserSetPhotoReq{}
 
 	//把protobuf二进制数据转成logics.UserLoginReq结构体
 	data, _ := ioutil.ReadAll(r.Body)
@@ -75,7 +75,7 @@ func HTTPUserSetPhotoHandler(w http.ResponseWriter, r *http.Request) {
 
 func HTTPUserSetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 
-	req := &logics.UserSetPasswordReq{}
+	req := &protos.UserSetPasswordReq{}
 
 	//把protobuf二进制数据转成logics.UserLoginReq结构体
 	data, _ := ioutil.ReadAll(r.Body)

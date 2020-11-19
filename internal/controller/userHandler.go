@@ -3,13 +3,14 @@ package controller
 import (
 	"context"
 	"github.com/githubchry/goweb/internal/logics"
+	"github.com/githubchry/goweb/internal/logics/protos"
 	"log"
 	"regexp"
 )
 
-func UserLoginHandler(ctx context.Context, req *logics.UserLoginReq) logics.UserLoginRsp {
+func UserLoginHandler(ctx context.Context, req *protos.UserLoginReq) protos.UserLoginRsp {
 
-	var rsp logics.UserLoginRsp
+	var rsp protos.UserLoginRsp
 	// 校验参数
 	//用户名以字母下划线开头，由数字和字母组成 2-16位
 	match, _ := regexp.MatchString("^[a-zA-z_]\\w{1,15}$", req.Username)
@@ -31,13 +32,13 @@ func UserLoginHandler(ctx context.Context, req *logics.UserLoginReq) logics.User
 }
 
 
-func UserLogoutHandler(ctx context.Context, req *logics.UserLogoutReq) {
+func UserLogoutHandler(ctx context.Context, req *protos.UserLogoutReq) {
 	// 调用真正的api
 	logics.UserLogout(req)
 }
 
-func UserRegisterHandler(ctx context.Context, req *logics.UserRegisterReq) logics.Status {
-	var rsp logics.Status
+func UserRegisterHandler(ctx context.Context, req *protos.UserRegisterReq) protos.Status {
+	var rsp protos.Status
 	// 无需校验token
 
 	// 校验参数
@@ -67,8 +68,8 @@ func UserRegisterHandler(ctx context.Context, req *logics.UserRegisterReq) logic
 	return logics.UserRegister(req)
 }
 
-func UserSetPhotoHandler(ctx context.Context, req *logics.UserSetPhotoReq) logics.Status {
-	var rsp logics.Status
+func UserSetPhotoHandler(ctx context.Context, req *protos.UserSetPhotoReq) protos.Status {
+	var rsp protos.Status
 	// 无需校验token
 
 	// 校验参数
@@ -92,8 +93,8 @@ func UserSetPhotoHandler(ctx context.Context, req *logics.UserSetPhotoReq) logic
 	return logics.UserSetPhoto(req)
 }
 
-func UserSetPasswordHandler(ctx context.Context, req *logics.UserSetPasswordReq) logics.Status {
-	var rsp logics.Status
+func UserSetPasswordHandler(ctx context.Context, req *protos.UserSetPasswordReq) protos.Status {
+	var rsp protos.Status
 	// 无需校验token
 
 	// 校验参数

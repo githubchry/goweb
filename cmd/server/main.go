@@ -4,6 +4,7 @@ import (
 	"github.com/githubchry/goweb/configs"
 	"github.com/githubchry/goweb/internal/dao/drivers"
 	"github.com/githubchry/goweb/internal/logics"
+	"github.com/githubchry/goweb/internal/logics/protos"
 	"github.com/githubchry/goweb/internal/middleware"
 	"github.com/githubchry/goweb/internal/protocol"
 	"github.com/githubchry/goweb/internal/view"
@@ -23,7 +24,7 @@ func initdbcfg() {
 	// log打印设置: Lshortfile文件名+行号  LstdFlags日期加时间
 	log.SetFlags(log.Llongfile | log.LstdFlags | log.Lmicroseconds)
 
-	appcfg, ok := configs.LoadConfig("../configs/config.json")
+	appcfg, ok := configs.LoadConfig("./config.json")
 	if !ok {
 		return
 	}
@@ -74,8 +75,8 @@ func printAddr() {
 }
 
 const (
-	certFileName = "../cert/cert.cer"
-	keyFileName  = "../cert/cert.key"
+	certFileName = "./cert/cert.cer"
+	keyFileName  = "./cert/cert.key"
 )
 
 func main() {
@@ -97,8 +98,8 @@ func main() {
 	grpcServer := grpc.NewServer(grpc.Creds(cert))
 
 	// 注册grpc方法
-	logics.RegisterAddServer(grpcServer, new(logics.AddServiceImpl))
-	logics.RegisterEventUploadServer(grpcServer, new(logics.EventUploadServiceImpl))
+	protos.RegisterAddServer(grpcServer, new(logics.AddServiceImpl))
+	protos.RegisterEventUploadServer(grpcServer, new(logics.EventUploadServiceImpl))
 
 	lis, _:=net.Listen("tcp", ":"+strconv.Itoa(grpcport))
 	go grpcServer.Serve(lis)
@@ -128,7 +129,7 @@ func main() {
 
 	route.PathPrefix("/proto").Handler(http.StripPrefix("/proto", http.FileServer(http.Dir("../proto"))))
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等
-	route.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("../web/static"))))
+	route.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./www/static"))))
 
 	// 打印本机IP地址
 	printAddr()

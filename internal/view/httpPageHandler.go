@@ -3,7 +3,7 @@ package view
 import (
 	"fmt"
 	"github.com/githubchry/goweb/internal/dao/models"
-	"github.com/githubchry/goweb/internal/logics"
+	"github.com/githubchry/goweb/internal/logics/protos"
 	"github.com/gorilla/mux"
 	"html/template"
 	"log"
@@ -13,7 +13,7 @@ import (
 func HTTPUserSettingPageHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 查询用户名是否已存在
-	var result logics.User
+	var result protos.User
 	models.NewMgo().FindOne("username", mux.Vars(r)["username"]).Decode(&result)
 
 	if len(result.Username) <= 0 {
@@ -21,7 +21,7 @@ func HTTPUserSettingPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// 解析指定文件生成模板对象
-	tmpl, err := template.ParseFiles("../web/template/settings.tmpl")
+	tmpl, err := template.ParseFiles("../www/template/settings.tmpl")
 	if err != nil {
 		fmt.Println("create template failed, err:", err)
 		return
@@ -51,14 +51,14 @@ func HTTPUserPageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("method:", r.Method) //获取请求的方法
 
 	// 解析指定文件生成模板对象
-	tmpl, err := template.ParseFiles("../web/template/user.tmpl")
+	tmpl, err := template.ParseFiles("../www/template/user.tmpl")
 	if err != nil {
 		fmt.Println("create template failed, err:", err)
 		return
 	}
 
 	// 查询用户名是否已存在
-	var result logics.User
+	var result protos.User
 	models.NewMgo().FindOne("username", mux.Vars(r)["username"]).Decode(&result)
 
 	var tmplUser  struct {

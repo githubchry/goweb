@@ -223,7 +223,6 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
     volumes:
       - /mnt/e/temp/kafka/docker.sock:/var/run/docker.sock
-
 ```
 在`docker-compose.yml`当前目录下运行:`docker-compose up -d`
 ```shell script

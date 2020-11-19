@@ -4,6 +4,7 @@ package logics
 #include <stdio.h>
 #include <fcntl.h>      // O_CREAT | O_RDWR | O_BINARY
 #include <stdlib.h>     // defer C.free
+
 int add(int a, int b) {
     return a+b;
 }
@@ -19,14 +20,13 @@ int saveimg(char *filename, char *ptr, int size) {
 
 int save_multipath_img(char **ptr, int *size, int num) {
 
-
     return 0;
 }
 */
-//#cgo CFLAGS: -I./algorithm/number
-//#cgo LDFLAGS: -L${SRCDIR}/algorithm/number -lnumber
+//#cgo CFLAGS: -I${SRCDIR}/../../cgo
+//#cgo LDFLAGS: -L${SRCDIR}/../../cgo/number -lnumber
 // //编译时GCC会自动找到libnumber.a或libnumber.so进行链接
-//#include "algorithm/number/number.h"
+//#include <number/number.h>
 import "C"
 import (
 	"unsafe"
