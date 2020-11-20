@@ -1,6 +1,8 @@
 # 版本3支持集群部署 版本2仅支持单机部署
 version: '3'
-#
+#声明volumes
+volumes:
+  volume-mongodb: { }
 services:
   zookeeper:
     image: wurstmeister/zookeeper
@@ -14,13 +16,10 @@ services:
     restart: always
     depends_on:
       - zookeeper
-    networks:
-      chrynetwork:
-        ipv4_address: 192.168.50.100
     ports:
       - "9092:9092"
     environment:
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.50.100:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.50.16:9092
       KAFKA_LISTENERS: PLAINTEXT://:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
   minio:
@@ -32,17 +31,6 @@ services:
     volumes:
       - /mnt/e/docker/mnt/minio/data:/data
     command: server /data
-  redis:
-    image: redis:latest
-    container_name: redis
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - /mnt/e/docker/mnt/redis/data:/data
-      - /mnt/e/docker/mnt/redis/config:/etc/redis
-    #指定配置文件, 指定授权密码, 持久化数据
-    command: redis-server /etc/redis/redis.conf --requirepass "chry" --appendonly yes
   mongo:
     image: mongo:latest
     container_name: mongo
@@ -50,16 +38,8 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - volume-mongodb:/data/db
+      # 由于兼容问题无法直接挂载win目录到mongo, 只能创建一个volume后挂载
+      #- volume-mongodb:/data/db
+      - ./mongo:/docker-entrypoint-initdb.d/
     # 启动授权登录
-    command: mongod --auth
-
-volumes:
-  volume-mongodb: { }
-
-networks:
-  chrynetwork:
-    ipam:
-      config:
-        - subnet: 192.168.50.0/24
-          gateway: 192.168.50.1   #这行不能加横线
+    command: --auth

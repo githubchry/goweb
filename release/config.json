@@ -19,7 +19,7 @@
     "port": 27017,
     "username": "chry",
     "password": "chry",
-    "dbname": "test",
+    "dbname": "chry",
     "ssl": false
   },
   "redis": {
