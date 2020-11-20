@@ -16,7 +16,7 @@ var MongoDbName string
 func MongoDBInit(cfg configs.MongoCfg) error {
 	var err error
 
-	MongoDbName = "test"
+	MongoDbName = cfg.DBName
 	// 设置客户端参数	"mongodb://chry:chry@localhost:27017/?authSource=test"
 	url := "mongodb://" + cfg.Username + ":" + cfg.Password + "@" + cfg.Addr + ":" + strconv.Itoa(cfg.Port) + "/?authSource=" + cfg.DBName
 	clientOptions := options.Client().ApplyURI(url)

@@ -21,7 +21,7 @@ func HTTPUserSettingPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// 解析指定文件生成模板对象
-	tmpl, err := template.ParseFiles("../www/template/settings.tmpl")
+	tmpl, err := template.ParseFiles("./www/template/settings.tmpl")
 	if err != nil {
 		fmt.Println("create template failed, err:", err)
 		return
@@ -51,7 +51,7 @@ func HTTPUserPageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("method:", r.Method) //获取请求的方法
 
 	// 解析指定文件生成模板对象
-	tmpl, err := template.ParseFiles("../www/template/user.tmpl")
+	tmpl, err := template.ParseFiles("./www/template/user.tmpl")
 	if err != nil {
 		fmt.Println("create template failed, err:", err)
 		return

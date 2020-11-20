@@ -31,6 +31,17 @@ services:
     volumes:
       - /mnt/e/docker/mnt/minio/data:/data
     command: server /data
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - /mnt/e/docker/mnt/redis/data:/data
+      - /mnt/e/docker/mnt/redis/config:/etc/redis
+    #指定授权密码, 持久化数据
+    command: redis-server --appendonly yes --requirepass "chry"
   mongo:
     image: mongo:latest
     container_name: mongo

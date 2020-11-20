@@ -1,6 +1,6 @@
 syntax = "proto3";      //指明使用proto3语法,否则编译器默认使用proto2的语法
 package logics;       //包声明符, 相当于命名空间，产生的类会被包装在C++命名空间中
-option go_package = "../internal/logics";
+option go_package = "../internal/logics/protos";
 import public "google/protobuf/timestamp.proto";
 //proto3取消了optional和required限定修饰符，只能使用singular(默认)和repeated
 //singular：该字段可以有0个或者1个（但是不能超过1个）。

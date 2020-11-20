@@ -80,7 +80,7 @@ func HTTPUserSetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	//把protobuf二进制数据转成logics.UserLoginReq结构体
 	data, _ := ioutil.ReadAll(r.Body)
 	if err := proto.Unmarshal(data, req); err != nil {
-		log.Println("Failed to parse protobuf:", err)
+		log.Printf("Failed to parse protobuf(len = %d): %s", len(data), err)
 		return
 	}
 

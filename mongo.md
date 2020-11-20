@@ -8,7 +8,7 @@
 
 [使用Docker一键部署MongoDB](https://blog.csdn.net/u011104991/article/details/81735960)
 
-## 挂载db目录问题
+## win10下挂载db目录问题
 
 ```
 docker for windows使用mongodb镜像，如果直接使用 -v 参数挂载磁盘目录，启动镜像的时候会报错。
@@ -138,6 +138,16 @@ services:
     # 启动授权登录
     command: --auth
 ```
+
+## 拓展: 环境变量
+
+[docker 官方mongodb镜像](https://www.jianshu.com/p/9703e77e7931)
+
+```
+
+```
+
+
 
 
 

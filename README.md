@@ -60,6 +60,7 @@ docker kill minio-chry
 # redis
 [Redis配置数据持久化](https://blog.csdn.net/ljl890705/article/details/51039015)
 [docker安装并运行redis](https://blog.csdn.net/weixin_38424794/article/details/104301969)
+
 ```
 安装
 sudo apt install redis
@@ -79,7 +80,7 @@ redis redis-server --appendonly yes
 或者 不指定配置文件
 docker run -p 6379:6379 --name redis-chry -d \
 -v /mnt/e/temp/redis/data:/data \
-redis redis-server --requirepass "chry" --appendonly yes
+redis redis-server --appendonly yes --requirepass "chry"
 
 
 
