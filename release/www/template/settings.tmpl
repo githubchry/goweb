@@ -187,28 +187,39 @@
         info.oldpass = md5(info.oldpass);
         info.newpass = md5(info.newpass);
         console.log(info)
+        protobuf.load("../proto/user.proto", function (err, root) {
+            if (err) throw err;
 
-        const url = '/api/userSetPassword';
-        const options = {
-            headers: {
-                "content-type": "application/json; charset=UTF-8"
-            },
-            // 将请求javascript object转换为JSON字符串
-            body: JSON.stringify(info),
-            method: "POST"
-        }
+            console.log(info)
+            // 获取消息类型Obtain a message type
+            var pbreq = root.lookupType("logics.UserSetPasswordReq");
+            // 验证有效负载(如可能不完整或无效 比如password, proto定义是string类型, 如果payload设为int的数值,就会返回错误)
+            if (pbreq.verify(info)) throw Error(errMsg);
 
-        // 发出http post请求, 等待响应
-        let rsp = await fetch(url, options)
-        // 将响应作为JSON字符串反序列化为javascript object
-        let rspjson = await rsp.json()
-        console.log(rspjson)
-        document.getElementById('result').innerText = rspjson.status.message;
+            // 根据payload创建消息体
+            var message = pbreq.create(info);
+            console.log(message);
 
-        if (0 == rspjson.status.code) {
-            localStorage.setItem("Token", rspjson.token);
-            // window.location.href = "index.html";
-        }
+            // Encode a message to an Uint8Array (browser) or Buffer (node)
+            var buffer = pbreq.encode(message).finish();
+            const url = '/api/userSetPassword';
+            const options = { body: buffer, method: "POST" };
+
+            // 发出http post请求, 等待响应
+            fetch(url, options).then(function (response) {
+                response.arrayBuffer().then(function (buffer) {
+                    // 获取消息类型Obtain a message type
+                    var msg = root.lookupType("logics.Status").decode(new Uint8Array(buffer))
+                    console.log(msg);
+
+                    document.getElementById('result').innerText = msg.message;
+
+                    if (0 == msg.code) {
+                        localStorage.setItem("Token", "");
+                    }
+                })
+            });
+        });
     }
 
 </script>

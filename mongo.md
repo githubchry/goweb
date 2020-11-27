@@ -101,7 +101,7 @@ db.createCollection("chry");
 把该文件放在目录下比如`/mnt/e/ubuntu/codes/git/goweb/release/mongo`, 在创建容器时挂载到`/docker-entrypoint-initdb.d`目录:
 
 ```
-docker run -p 27017:27017 --name mongo-chry -d -v /mnt/e/ubuntu/codes/git/goweb/release/mongo:/docker-entrypoint-initdb.d/ mongo --auth
+docker run -p 17017:27017 --name mongo-chry -d -v /mnt/e/ubuntu/codes/git/goweb/release/mongo:/docker-entrypoint-initdb.d/ mongo --auth
 ```
 
 测试一下:

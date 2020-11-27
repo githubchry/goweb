@@ -9,45 +9,6 @@ option go_package = "../internal/logics/protos";
 //message和enum命名采用驼峰命名方式，大写开头 比如Packet和PacketType
 //字段命名采用小写字母加下划线分隔方式 比如packet和packet_type
 
-/*
-type UserLoginReq struct {
-	Username	string 	`json:"username" validate:"len>=2,len<=16"`
-	Password	string	`json:"password" validate:"len=32"`
-}
-
-type UserRegisterReq struct {
-	Username	string 	`json:"username" validate:"len>=2,len<=16"`
-	Password	string	`json:"password" validate:"len=32"`
-	Email 		string	`json:"email" validate:"email"`
-}
-
-type UserSetPhotoReq struct {
-	Username	string 	`json:"username" validate:"len>=2|len<=16"`
-	Photo 		string	`json:"photo" validate:"endswith=.jpg|endswith=.png"`
-}
-
-type UserSetPasswordReq  struct {
-	Username	string `json:"username" validate:"len>=2,len<=16"`
-	Oldpass		string `json:"oldpass" validate:"len=32"`
-	Newpass		string `json:"newpass" validate:"len=32,nefield=Oldpass"`
-}
-
-// UserRsp represents the result of an addition operation.
-type UserRsp struct {
-	Status 	Status	`json:"status"`			//应答状态
-	Result 	string	`json:"result"`
-	Token 	string 	`json:"token"`
-}
-
-type User struct {
-	Username	string 	`json:"username"`
-	Password	string	`json:"password"`
-	Email 		string	`json:"email"`
-	Photo 		string	`json:"photo"`
-}
-
-*/
-
 message Status {
   int32 code = 1;
   string message = 2;
@@ -71,27 +32,27 @@ message UserLoginRsp {
   string token = 3;
 }
 
-// 返回Status
+//注销
 message UserLogoutReq {
   string username = 1;
   string token = 2;
 }
 
-// 返回Status
+// 注册请求
 message UserRegisterReq {
   string username = 1;
   string password = 2;
   string email = 3;
 }
 
-// 返回Status
+// 注册应答
 message UserSetPhotoReq {
   string username = 1;
   string token = 2;
   string photo = 3;
 }
 
-// 返回Status
+// 修改密码请求
 message UserSetPasswordReq {
   string username = 1;
   string oldpass = 2;
