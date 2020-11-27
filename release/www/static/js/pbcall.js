@@ -38,3 +38,14 @@ function pbcall(pbf, req_type, rsp_type, url, req_json, handle) {
         });
     });
 }
+
+function pb2struct(pbf, pbtype, pb) {
+    protobuf.load(pbf, function (err, root) {
+        if (err) throw err;
+        var rsp_type_obj = root.lookupType(pbtype).decode(new Uint8Array(pb));
+
+        // console.log(JSON.stringify(rsp_type_obj));
+
+        return rsp_type_obj;
+    });
+}

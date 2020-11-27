@@ -101,7 +101,7 @@ func main() {
 	protos.RegisterAddServer(grpcServer, new(logics.AddServiceImpl))
 	protos.RegisterEventUploadServer(grpcServer, new(logics.EventUploadServiceImpl))
 
-	lis, _:=net.Listen("tcp", ":"+strconv.Itoa(grpcport))
+	lis, _ := net.Listen("tcp", ":"+strconv.Itoa(grpcport))
 	go grpcServer.Serve(lis)
 
 	// http2
@@ -116,7 +116,7 @@ func main() {
 	route.HandleFunc("/api/register", protocol.HTTPUserRegisterHandler)           // POST
 	route.HandleFunc("/api/userSetPhoto", protocol.HTTPUserSetPhotoHandler)       // POST
 	route.HandleFunc("/api/userSetPassword", protocol.HTTPUserSetPasswordHandler) // POST
-	route.HandleFunc("/api/presignedUrl", protocol.HTTPPresignedUrlHandler) // POST
+	route.HandleFunc("/api/presignedUrl", protocol.HTTPPresignedUrlHandler)       // POST
 
 	route.HandleFunc("/api/echo", logics.Echo) //WEBSOCKET
 
@@ -125,7 +125,6 @@ func main() {
 
 	route.HandleFunc("/api/eventResult", logics.EventResult) //WEBSOCKET
 	route.HandleFunc("/image/post", protocol.HTTPImagePostHandler)
-	route.HandleFunc("/person_detection", protocol.HTTPImagePostHandler)
 
 	route.PathPrefix("/proto").Handler(http.StripPrefix("/proto", http.FileServer(http.Dir("../proto"))))
 	// 使用web目录下的文件来响应对/路径的http请求，一般用作静态文件服务，例如html、javascript、css等

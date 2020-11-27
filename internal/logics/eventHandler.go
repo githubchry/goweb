@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 	"image"
 	_ "image/jpeg"
+	_ "image/png"
 	"log"
 	"net/http"
 	"strconv"
@@ -16,8 +17,9 @@ import (
 )
 
 type EventUploadServiceImpl struct{}
-func (p *EventUploadServiceImpl) EventUpload(ctx context.Context, args *protos.EventReq, ) (*protos.EventRsp, error) {
-	log.Println(args);
+
+func (p *EventUploadServiceImpl) EventUpload(ctx context.Context, args *protos.EventReq) (*protos.EventRsp, error) {
+	log.Println(args)
 	rsp := &protos.EventRsp{Message: "sucess"}
 	return rsp, nil
 }
@@ -52,7 +54,6 @@ var wslist []*websocket.Conn
 var wschan chan []byte
 var msgchan chan protos.EventReq // 暂时没啥卵用
 var imgchan chan []byte
-
 
 func consumerThread(topic string, process func(msg *sarama.ConsumerMessage)) {
 	msgchan = make(chan protos.EventReq, 16)
@@ -91,16 +92,14 @@ func resultConsumer(msg *sarama.ConsumerMessage) {
 	wschan <- msg.Value
 }
 
-
 func eventHandle() {
 
 	for {
 		select {
-		case img := <- imgchan:
+		case img := <-imgchan:
 			log.Printf("图片大小:%v\n", len(img))
-			strresult := "已处理图片: size="+strconv.Itoa(len(img))
+			strresult := "已处理图片: size=" + strconv.Itoa(len(img))
 			log.Printf(strresult)
-
 
 			im, _, err := image.DecodeConfig(bytes.NewReader(img))
 			if err != nil {
@@ -117,8 +116,8 @@ func eventHandle() {
 
 			// 转化成kafka消息
 			msgresult := &sarama.ProducerMessage{
-				Topic : "event_result",
-				Value : sarama.StringEncoder(strresult),
+				Topic: "event_result",
+				Value: sarama.StringEncoder(strresult),
 			}
 
 			_, err = ProducerInput(ResultProducer, msgresult)
@@ -148,7 +147,7 @@ func eventHandlerThread() {
 				imgnum = 0
 			}
 
-		case msg := <- msgchan:
+		case msg := <-msgchan:
 			log.Printf("收到事件:%v\n", msg.Offset)
 		default:
 			if imgnum >= 16 {
@@ -179,7 +178,7 @@ func QueueMemberInit() error {
 	//是否等待成功和失败后的响应,只有上面的RequireAcks设置不是NoReponse(默认)这里才有用. 成功交付的消息将在success channel返回
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
-	config.Producer.MaxMessageBytes = MAXMSGBYTES	// 保持默认
+	config.Producer.MaxMessageBytes = MAXMSGBYTES // 保持默认
 
 	ImageProducer, err = models.CreateProducer(*config)
 	if err != nil {
@@ -242,8 +241,8 @@ func wspolling() {
 		case msg := <-wschan:
 			log.Println("websocket轮询线程收到事件处理结果:", string(msg))
 			// 轮询转发过程中移除已关闭的客户端 [slice移除算法出处](https://blog.csdn.net/liyunlong41/article/details/85132603)
-			idx := 0	// 记录下一个有效conn应该在的位置
-			for _, conn := range wslist{
+			idx := 0 // 记录下一个有效conn应该在的位置
+			for _, conn := range wslist {
 				log.Println("转发消息至:", &conn)
 
 				// 判断客户端是否已经断开
@@ -291,7 +290,7 @@ func ImagePostHandler(ctx context.Context, img []byte) (*protos.PersonDetectionR
 		log.Printf("图片过大!!")
 
 		rsp := &protos.PersonDetectionRsp{
-			Code: -1,
+			Code:    -1,
 			Message: "图片过大!",
 		}
 		return rsp, nil
@@ -299,15 +298,15 @@ func ImagePostHandler(ctx context.Context, img []byte) (*protos.PersonDetectionR
 
 	// 先发送image, 然后发送struct
 	msgimage := &sarama.ProducerMessage{
-		Topic : "event_image",
-		Value : sarama.ByteEncoder(img),
+		Topic: "event_image",
+		Value: sarama.ByteEncoder(img),
 	}
 
 	_, err := ProducerInput(ImageProducer, msgimage)
 	if err != nil {
 		log.Println("eventProducer image failed:", err)
 		rsp := &protos.PersonDetectionRsp{
-			Code: -2,
+			Code:    -2,
 			Message: "推送图片到队列失败!",
 		}
 		return rsp, err
@@ -323,26 +322,26 @@ func ImagePostHandler(ctx context.Context, img []byte) (*protos.PersonDetectionR
 	case <-ticker.C:
 		log.Println("等待分析结果超时!")
 
-	case rsp = <- retchan:
+	case rsp = <-retchan:
 		log.Printf("收到分析结果:%v\n", len(rsp.Targets))
 	}
 
 	// 后续处理结果根据offset进行对应识别
 	rsp.Targets = []*protos.TorchObject{
 		{
-			X: 113,
-			Y: 166,
-			W: 226,
-			H: 462,
-			Conf: 99,
+			X:     113,
+			Y:     166,
+			W:     226,
+			H:     462,
+			Conf:  99,
 			Label: "person",
 		},
 		{
-			X: 1143,
-			Y: 166,
-			W: 183,
-			H: 481,
-			Conf: 99,
+			X:     1143,
+			Y:     166,
+			W:     183,
+			H:     481,
+			Conf:  99,
 			Label: "person",
 		},
 	}

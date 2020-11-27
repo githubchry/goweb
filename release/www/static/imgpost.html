@@ -11,7 +11,6 @@
 </br>
 <input type="file" id="selector" accept="image/jpeg,image/png" />
 <button onclick="postImage();">上传</button>
-<button onclick="getImage();">下载</button>
 
 <div class="mui-content-padded">
     <p id='result'>" "</p>
@@ -25,6 +24,7 @@
 
 <script src="js/md5.js"></script>
 <script src="js/protobuf.js"></script>
+<script src="js/pbcall.js"></script>
 <!-- 内嵌的javascript代码 -->
 <script>
     function postImage() {
@@ -46,33 +46,14 @@
         // 发出http post请求, 等待响应
         fetch(url, options).then((response)=>{
             response.arrayBuffer().then((buffer)=>{
-                protobuf.load("../proto/user.proto", function (err, root) {
-                    if (err) throw err;
-                    var rspmsg = root.lookupType("logics.Status").decode(new Uint8Array(buffer));
-                    console.log(rspmsg);
-                    document.getElementById('result').innerText = rspmsg.message;
-                });
+                var rspmsg = pb2struct("../proto/algorithm.proto", "logics.PersonDetectionRsp", buffer);
+
+                document.getElementById('result').innerText = JSON.stringify(rspmsg);
+
             })
         });
     }
 
-    function getImage() {
-
-        const url = '/image/get';
-        const options = {method: "POST"}
-
-        // 发出http post请求, 等待响应
-        fetch(url, options).then((response)=>{
-            response.arrayBuffer().then((buffer)=>{
-                protobuf.load("../proto/user.proto", function (err, root) {
-                    if (err) throw err;
-                    var rspmsg = root.lookupType("logics.Status").decode(new Uint8Array(buffer));
-                    console.log(rspmsg);
-                    document.getElementById('result').innerText = rspmsg.message;
-                });
-            })
-        });
-    }
 
     var ws = null;
     window.onload = function() {

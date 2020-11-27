@@ -1,29 +1,23 @@
 package protocol
 
 import (
-	"encoding/json"
 	"github.com/githubchry/goweb/internal/logics"
+	"github.com/golang/protobuf/proto"
 	"io/ioutil"
 	"log"
 	"net/http"
 )
 
 func HTTPImagePostHandler(w http.ResponseWriter, r *http.Request) {
-	// 根据字段名获取表单文件
-	formFile, _, err := r.FormFile("image")
+
+	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("Get form file failed: %s\n", err)
-		return
+		log.Fatal(err)
 	}
-	defer formFile.Close()
 
-	data, _ := ioutil.ReadAll(formFile)
+	log.Println("method:", r.Method, "buf len:", len(buf)) //获取请求的方法
 
-	rsp, err := logics.ImagePostHandler(r.Context(), data)
-	json_str, err := json.Marshal(rsp)
-	log.Printf("%s\n", json_str)
-
-	w.Write(json_str)
+	rsp, _ := logics.ImagePostHandler(r.Context(), buf)
+	data, _ := proto.Marshal(rsp)
+	w.Write(data)
 }
-
-
