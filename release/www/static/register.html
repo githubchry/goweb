@@ -34,6 +34,7 @@
 
 <script src="js/md5.js"></script>
 <script src="js/protobuf.js"></script>
+<script src="js/pbcall.js"></script>
 <script>
 	window.onload = function init() {
 
@@ -84,34 +85,15 @@
 
 			regInfo.password = md5(regInfo.password);
 			console.log(regInfo)
-            protobuf.load("proto/user.proto", async function (err, root) {
-                if (err) throw err;
-                // 获取消息类型Obtain a message type
-                var pbreq = root.lookupType("logics.UserRegisterReq");
-				// 验证有效负载(如可能不完整或无效 比如password, proto定义是string类型, 如果payload设为int的数值,就会返回错误)
-                if (pbreq.verify(regInfo)) throw Error(errMsg);
 
-                // 根据payload创建消息体
-                var reqmsg = pbreq.create(regInfo);
-                console.log(reqmsg);
+			pbcall("../proto/user.proto", "logics.UserRegisterReq", "logics.UserRegisterRsp", "/api/register", regInfo, function (rsp) {
 
-                // Encode a message to an Uint8Array (browser) or Buffer (node)
-                var buffer = pbreq.encode(reqmsg).finish();
-                const url = '/api/register';
-                const options = { body: buffer, method: "POST" };
+				document.getElementById('result').innerText = rsp.message;
 
-                // 发出http post请求, 等待响应
-                let rsp     = await fetch(url, options);
-                var buffer  = await rsp.arrayBuffer();
-                var rspmsg = root.lookupType("logics.UserLoginRsp").decode(new Uint8Array(buffer))
-                console.log(rspmsg);
-
-                document.getElementById('result').innerText = rspmsg.message;
-
-                if (0 == rspmsg.code) {
-                    window.location.href = "login.html";
-                }
-            });
+				if (0 == rsp.code) {
+					window.location.href = "login.html";
+				}
+			});
 		})
 	}
 </script>

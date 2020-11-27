@@ -26,6 +26,7 @@
 
 <script src="js/md5.js"></script>
 <script src="js/protobuf.js"></script>
+<script src="js/pbcall.js"></script>
 <script>
 	window.onload = function init() {
 
@@ -59,44 +60,19 @@
 
 			loginInfo.password = md5(loginInfo.password);
 
-            protobuf.load("proto/user.proto", function (err, root) {
-                if (err) throw err;
+			pbcall("../proto/user.proto", "logics.UserLoginReq", "logics.UserLoginRsp", "/api/login", loginInfo, function (rsp) {
 
-                console.log(loginInfo)
-                // 获取消息类型Obtain a message type
-                var pbreq = root.lookupType("logics.UserLoginReq");
-				// 验证有效负载(如可能不完整或无效 比如password, proto定义是string类型, 如果payload设为int的数值,就会返回错误)
-                if (pbreq.verify(loginInfo)) throw Error(errMsg);
+				document.getElementById('result').innerText = rsp.message;
 
-                // 根据payload创建消息体
-                var message = pbreq.create(loginInfo);
-                console.log(message);
-
-                // Encode a message to an Uint8Array (browser) or Buffer (node)
-                var buffer = pbreq.encode(message).finish();
-                const url = '/api/login';
-                const options = { body: buffer, method: "POST" };
-
-                // 发出http post请求, 等待响应
-                fetch(url, options).then(function (response) {
-                    response.arrayBuffer().then(function (buffer) {
-                        // 获取消息类型Obtain a message type
-                        var msg = root.lookupType("logics.UserLoginRsp").decode(new Uint8Array(buffer))
-                        console.log(msg);
-
-                        document.getElementById('result').innerText = msg.message;
-
-                        if (0 == msg.code) {
-                            localStorage.setItem("Token", msg.token);
-                            localStorage.setItem("Username", loginInfo.username);
-                            window.location.href = "index.html";
-                        }
-                    })
-                });
-            });
+				if (0 == rsp.code) {
+					localStorage.setItem("Token", rsp.token);
+					localStorage.setItem("Username", loginInfo.username);
+					window.location.href = "index.html";
+				}
+			});
 		})
-		registerButton.addEventListener('click', async function(event) {
 
+		registerButton.addEventListener('click', async function(event) {
 			window.location.href = "register.html";
 		})
 	}

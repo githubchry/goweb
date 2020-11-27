@@ -17,6 +17,7 @@
 
 <!-- 内嵌的javascript代码 -->
 <script src="js/protobuf.js"></script>
+<script src="js/pbcall.js"></script>
 <script>
 
     // 计算按钮的点击响应函数
@@ -32,27 +33,8 @@
 	        token:localStorage.getItem("Token")
         };
 
-        protobuf.load("proto/user.proto", function (err, root) {
-            if (err) throw err;
-
-            console.log(info)
-            // 获取消息类型Obtain a message type
-            var pbreq = root.lookupType("logics.UserLogoutReq");
-            // 验证有效负载(如可能不完整或无效 比如password, proto定义是string类型, 如果payload设为int的数值,就会返回错误)
-            if (pbreq.verify(info)) throw Error(errMsg);
-
-            // 根据payload创建消息体
-            var message = pbreq.create(info);
-            console.log(message);
-
-            // Encode a message to an Uint8Array (browser) or Buffer (node)
-            var buffer = pbreq.encode(message).finish();
-            const url = '/api/logout';
-            const options = { body: buffer, method: "POST" };
-            // 发出http post请求, 等待响应
-            fetch(url, options).then(function (response) {
-                window.location.href = "login.html";
-            });
+        pbcall("../proto/user.proto", "logics.UserLogoutReq", "", "/api/logout", loginInfo, function (rsp) {
+            window.location.href = "login.html";
         });
     }
 
@@ -67,39 +49,15 @@
             operand: [(Number)(num1), (Number)(num2)]
         };
 
-        protobuf.load("proto/add.proto", function (err, root) {
-            if (err) throw err;
+        pbcall("../proto/add.proto", "logics.AddReq", "logics.AddRsp", "/api/addpost", data, function (rsp) {
 
-            console.log(data)
-            // 获取消息类型Obtain a message type
-            var pbreq = root.lookupType("logics.AddReq");
-            // 验证有效负载(如可能不完整或无效 比如password, proto定义是string类型, 如果payload设为int的数值,就会返回错误)
-            if (pbreq.verify(data)) throw Error(errMsg);
-
-            // 根据payload创建消息体
-            var message = pbreq.create(data);
-            console.log(message);
-
-            // Encode a message to an Uint8Array (browser) or Buffer (node)
-            var buffer = pbreq.encode(message).finish();
-            const url = '/api/addpost';
-            const options = { body: buffer, method: "POST" };
-            // 发出http post请求, 等待响应
-            fetch(url, options).then(function (response) {
-                response.arrayBuffer().then(function (buffer) {
-                    // 获取消息类型Obtain a message type
-                    var msg = root.lookupType("logics.AddRsp").decode(new Uint8Array(buffer))
-                    console.log(msg);
-
-                    if (0 == msg.code) {
-                        document.getElementById('result').innerText = msg.result
-                    } else if (-1 == msg.code) {
-                        document.getElementById('result').innerText = msg.message;
-                        alert(msg.message + "\n即将重新登录!");
-                        window.location.href = "login.html";
-                    }
-                })
-            });
+            if (0 == rsp.code) {
+                document.getElementById('result').innerText = rsp.result
+            } else if (-1 == rsp.code) {
+                document.getElementById('result').innerText = rsp.message;
+                alert(rsp.message + "\n即将重新登录!");
+                window.location.href = "login.html";
+            }
         });
     }
 
