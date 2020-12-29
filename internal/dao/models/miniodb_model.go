@@ -28,7 +28,7 @@ func PreDownload(bucketName string, fileName string) string {
 	if err != nil {
 		log.Println(err)
 	}
-	//log.Println("Successfully generated presigned URL", presignedURL)
+	log.Println("Successfully generated presigned URL", presignedURL)
 	return presignedURL.String()
 }
 

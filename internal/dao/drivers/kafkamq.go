@@ -12,6 +12,9 @@ import (
 var kafkaMqClient sarama.Client
 var KafkaMqAddr []string
 
+const TopicImage = "event_image"
+const TopicStatus = "event_result"
+
 func KafkaMQInit(cfg configs.KafkaCfg) error {
 
 	//详细的config参数:https://blog.csdn.net/chinawangfei/article/details/93097203
@@ -19,24 +22,29 @@ func KafkaMQInit(cfg configs.KafkaCfg) error {
 	//设置使用的kafka版本,如果低于V0_10_0_0版本,消息中的timestrap没有作用.需要消费和生产同时配置
 	//注意，版本设置不对的话，kafka会返回很奇怪的错误，并且无法成功发送消息
 	config.Version = sarama.V2_6_0_0
+	config.Net.DialTimeout = 300000000	//3秒 不要用3 * time.Second 对应不上! => 0.3*time.Second
 
 	KafkaMqAddr = []string{cfg.Addr+":"+strconv.Itoa(cfg.Port)}
 	var err error
+	log.Println("KafkaMQ Client Conn .....")
 	kafkaMqClient, err = sarama.NewClient(KafkaMqAddr, config)
 	if err != nil {
-		log.Fatal("create KafkaMq client failed:", err)
+		log.Println("create KafkaMq", KafkaMqAddr, "client failed:", err)
+		return err
 	}
 
 	// 创建Topics
 	err = createTopics()
 	if err != nil {
-		log.Fatal("createTopics Failed:", err)
+		log.Println("createTopics Failed:", err)
+		return err
 	}
 
 	//获取主题的名称集合
 	topics, err := kafkaMqClient.Topics()
 	if err != nil {
-		log.Fatal("get topics err:", err)
+		log.Println("get topics err:", err)
+		return err
 	}
 
 	for _, e := range topics {
@@ -81,21 +89,32 @@ func createTopics() error {
 	//defer KafkaMqBroker.Close()
 
 	// 2.创建2个Topic, event_image放图片, event_status放处理结果
-	topicEventImage := "event_image"
+	cleanup_policy := "delete"
+	retention_bytes := "40000000"	//400M
+	segment_bytes 	:= "20000000"			//200M
+
+	configEntries := map[string]*string{
+		"cleanup.policy" : &cleanup_policy,
+		"retention.bytes": &retention_bytes,
+		"segment.bytes": &segment_bytes,
+	}
+
 	topicEventImageDetail := &sarama.TopicDetail{}
 	topicEventImageDetail.NumPartitions = int32(1)
 	topicEventImageDetail.ReplicationFactor = int16(1)
-	topicEventImageDetail.ConfigEntries = make(map[string]*string)
+	topicEventImageDetail.ConfigEntries = configEntries
 
-	topicEventStatus := "event_result"
 	topicEventStatusDetail := &sarama.TopicDetail{}
 	topicEventStatusDetail.NumPartitions = int32(1)
 	topicEventStatusDetail.ReplicationFactor = int16(1)
-	topicEventStatusDetail.ConfigEntries = make(map[string]*string)
+	topicEventStatusDetail.ConfigEntries = configEntries
+
+	//message_max_bytes := "100000"
+	//topicEventImageDetail.ConfigEntries["message.max.bytes"] = &message_max_bytes
 
 	topicDetails := make(map[string]*sarama.TopicDetail)
-	topicDetails[topicEventImage] = topicEventImageDetail
-	topicDetails[topicEventStatus] = topicEventStatusDetail
+	topicDetails[TopicImage] = topicEventImageDetail
+	topicDetails[TopicStatus] = topicEventStatusDetail
 
 	// 创建请求
 	request := sarama.CreateTopicsRequest{
@@ -118,6 +137,8 @@ func createTopics() error {
 				log.Printf("create topic [%s] error: %s\n", key, val.Error())
 				return errors.New(val.Error())
 			}
+		} else {
+			log.Printf("topic [%s] 创建成功!\n", key)
 		}
 	}
 
@@ -125,13 +146,10 @@ func createTopics() error {
 }
 
 func deleteTopics() {
-	topicEventImage  := "event_image"
-	topicEventStatus := "event_result"
-
 	// 创建删除请求
 	request := sarama.DeleteTopicsRequest{
 		Timeout:	time.Second * 15,
-		Topics: []string{topicEventImage, topicEventStatus},
+		Topics: []string{TopicImage, TopicStatus},
 	}
 
 	broker, err := kafkaMqClient.Controller()
@@ -151,3 +169,5 @@ func deleteTopics() {
 		}
 	}
 }
+
+

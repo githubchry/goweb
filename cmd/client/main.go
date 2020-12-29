@@ -11,7 +11,7 @@ import (
 
 
 const (
-	certFileName = "../cert/cert.cer"
+	certFileName = "./cert/cert.cer"
 )
 
 //[TLS 证书认证](https://segmentfault.com/a/1190000016601783)
