@@ -1,4 +1,4 @@
-# docker
+# Docker
 
 ## 总览
 
@@ -125,6 +125,8 @@ docker exec -it minio-chry /bin/bash
 
 [docker run 参数详解](https://blog.csdn.net/weixin_39998006/article/details/99680522)
 
+[Docker run 命令参数及使用](https://blog.csdn.net/luolianxi/article/details/107169954)
+
 ```
 命令格式：docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 ```
@@ -151,6 +153,7 @@ docker exec -it minio-chry /bin/bash
 --rm=false， 指定容器停止后自动删除容器(有人说不支持以docker run -d启动的容器, 但本人实测确发现可以)
 	docker: Conflicting options: --restart and --rm.
 
+
 ```
 
 常用示例:
@@ -167,17 +170,154 @@ docker run -it --rm=true --name pserver personreidserver:0.1
 
 ```
 
+## 网桥
+
+[Docker容器间通信方法](https://juejin.cn/post/6844903847383547911)
+
+```
+创建了一个名为"my-net"的网络
+docker network create my-net
+
+将容器加入my-net网络中
+docker network connect my-net test_demo  
+docker network connect my-net mysqld5.7
+
+查看my-net的网络配置
+docker network inspect my-net
+
+测试别名互连: 进入容器test_demo的终端, ping mysqld5.7
+
+断开容器与docker0的连接
+docker network disconnect bridge test_demo
+docker network disconnect bridge mysqld5.7
+
+```
 
 
-# dockerfile
+
+# Dockerfile
+
+Dockerfile 是一个用来构建镜像的文本文件，文本内容包含了一条条构建镜像所需的指令和说明。
+
+## 语法
+
+```dockerfile
+# 思路: 分编译和发布两个阶段, 在带go语言的docker镜像中编译，将编译出来的二进制文件拷贝到一个不带go环境的较小的镜像
+# 编译阶段过程中会产生名为none的镜像, 删除之:
+#docker rmi $(docker images | grep "none" | awk '{print $3}')
+#docker rmi $(docker images -q -f dangling=true)
+
+# 运行示例: docker build -t personreidserver:0.1 -f Dockerfile ..
+# -t personreidserver:0.1 指定构建的镜像名称和tag
+# -f Dockerfile表示指定Dockerfile文件路径
+# .. 表示上下文目录
+
+
+#编译阶段：使用golang:rc-alpine 版本
+FROM golang:rc-alpine as build
+
+# 容器环境变量添加
+ENV GO111MODULE=on
+ENV GOPROXY=https://goproxy.cn,direct
+
+# 设置当前工作区
+WORKDIR /go/release
+
+# 把全部文件添加到/go/release目录
+# 第一个. 表示运行本Dockerfile时, docker build命令所指定的目录 一般要求是源码文件
+# 第二个. 表示上面WORKDIR指定的目录
+ADD . .
+
+# [Alpine 的 CGO 问题](https://www.jianshu.com/p/22956db3a52a)
+# [Docker与Golang的巧妙结合](http://dockone.io/article/1712)
+# [在Goland中使用Docker插件生成镜像与创建容器](https://www.cnblogs.com/litchi99/p/13724811.html)
+# [多阶段构建Golang程序Docker镜像](https://www.cnblogs.com/FireworksEasyCool/p/12838875.html)
+# 编译: 把main.go编译为可执行的二进制文件, 并命名为app
+# alpine只支持静态链接, 当cgo开启时，默认是按照动态库的方式来链接so文件, 于是使用CGO_ENABLED=0关闭了cgo
+# 如果需要使用cgo, 可调用 go build --ldflags="-extldflags -static" 来让gcc使用静态编译解决问题
+# GOARCH：32位系统为386，64位系统为amd64
+# -ldflags参数: -w关闭所有告警信息 -s省略符号表和调试信息
+# -installsuffix 在软件包安装的目录中增加后缀标识，用于区分默认版本, 比如这里指定为cgo
+# -o：指定编译后的可执行文件名称
+RUN GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags="-s -w" -installsuffix cgo -o app cmd/httpserver/main.go
+
+
+
+# 上面将源码编译出了二进制文件, 下面把二进制文件和相关依赖打包整一个镜像
+
+
+# 使用alpine作为基础镜像
+FROM alpine as production
+
+# 拷贝本机输入目录下的release配置文件和资源文件
+ADD ./release /release/
+# 复制build阶段编译出来的可执行二进制文件到production阶段的/release/目录下
+COPY --from=build /go/release/app /release/
+
+# 指定运行目录
+WORKDIR /release
+# 启动服务
+CMD ["./app"]
+
+```
+
+## 运行
+
+```
+docker build -t name:tag -f filepath dir
+-t指定构建的镜像名和TAG
+-f指定构建使用的Dockerfile路径
+最后一个参数指定上下文目录
+如:
+docker build -t pdserver:0.1 -f docker/Dockerfile ./source_code
+```
 
 
 
 
 
+# Docker Compose
 
 
 
 
-# docker-compose
+
+# NVIDIA Docker
+
+注意: 不支持在虚拟机上安装NVIDIA显卡驱动
+
+[Ubuntu16.04下安装NVIDIA显卡驱动](https://blog.csdn.net/yinwangde/article/details/89439648)
+
+[可能会遇到的问题](https://blog.csdn.net/weixin_43002433/article/details/108888927)
+
+[Docker使用篇之Nvidia-docker](https://blog.csdn.net/felaim/article/details/105229226)
+
+## 运行gpu容器
+
+```
+使用所有GPU
+docker run --gpus all nvidia/cuda:9.0-base nvidia-smi
+
+使用两个GPU
+docker run --gpus 2 nvidia/cuda:9.0-base nvidia-smi
+
+指定GPU运行
+docker run --gpus '"device=1,2"' nvidia/cuda:9.0-base nvidia-smi
+docker run --gpus '"device=UUID-ABCDEF,1"' nvidia/cuda:9.0-base nvidia-smi
+```
+
+## 在docker-compose中使用gpu
+
+```
+version: '2.4'
+services:
+  nvsmi:
+    image: ubuntu:16.04
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    command: nvidia-smi
+```
+
+
 
