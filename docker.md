@@ -1,5 +1,92 @@
 # Docker
 
+## 安装
+
+[Install Docker Engine](https://docs.docker.com/engine/install/)
+
+```
+sudo apt install docker-compose
+```
+
+### 解决docker每次都需要输入sudo的权限问题
+
+```
+1. 创建docker工作组
+sudo groupadd docker
+
+2.将用户添加到docker组
+sudo gpasswd -a <你的用户名> docker
+
+3.重启docker
+sudo service docker restart
+
+4.退出shell 重新进入
+```
+
+
+将docker账户给与权限
+sudo gpasswd -a <你的用户名> docker
+重启docker
+sudo service docker restart
+
+### 解决docker pull速度慢的问题
+
+```
+在 /etc/docker/daemon.json 文件中添加以下参数（没有该文件则新建）：
+vim /etc/docker/daemon.json
+{
+	"registry-mirrors":["https://9cpn8tt6.mirror.aliyuncs.com", "https://registry.docker-cn.com"]
+}
+
+服务重启
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+
+其他源
+https://reg-mirror.qiniu.com
+http://hub-mirror.c.163.com
+
+```
+
+
+
+### 解决docker长期运行导致日志占满空间问题
+
+```
+sudo vim /etc/docker/daemon.json
+增加配置:
+{
+	"log-driver":"json-file",
+	"log-opts": {"max-size":"100m", "max-file":"3"}
+}
+
+"log-driver":"json-file" => 可以不写, 已经默认
+"log-opts": {"max-size":"100m", "max-file":"3"}  =>  每个容器最多生成3个文件, 每个文件最大100M, 按时间顺序轮转
+
+
+
+服务重启
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
+
+
+### 解决启动docker失败问题
+
+```
+错误打印:
+Job for docker.service failed because the control process exited with error code.
+See "systemctl status docker.service" and "journalctl -xe" for details.
+
+解决:
+检查docker全局配置文件/etc/docker/daemon.json语法是否存在错误, 主要是追加配置时逗号容易漏
+
+```
+
+
+
 ## 总览
 
 ```
@@ -9,6 +96,8 @@ docker system df
 进一步查看空间占用详情
 docker system df -v
 ```
+
+[如何清理 Docker 占用的磁盘空间](https://www.cnblogs.com/yogoup/p/12143103.html)
 
 通过 Docker 内置的 CLI 指令来进行自动空间清理:
 
@@ -160,13 +249,13 @@ docker exec -it minio-chry /bin/bash
 
 ```
 创建一个停止后自动删除容器
-docker run -itd --rm=true personreidserver:0.1
+docker run -itd --rm=true -v /etc/localtime:/etc/localtime personreidserver:0.1
 
 创建一个停止后自动删除容器, 不执行默认命令直接进入其终端 (需要提前知道该容器的终端是sh还是bash, 而且这时候就不应该加入-d参数了)
-docker run -it --rm=true personreidserver:0.1 /bin/sh
+docker run -it --rm=true --cap-add SYS_TIME -v /etc/localtime:/etc/localtime:rw personreidserver:0.1 /bin/sh
 
 强烈建议所有创建都指定名称:
-docker run -it --rm=true --name pserver personreidserver:0.1
+docker run -it --rm=true -v /etc/localtime:/etc/localtime --name pserver personreidserver:0.1
 
 ```
 
@@ -269,16 +358,25 @@ docker build -t name:tag -f filepath dir
 -f指定构建使用的Dockerfile路径
 最后一个参数指定上下文目录
 如:
-docker build -t pdserver:0.1 -f docker/Dockerfile ./source_code
+docker build -t personreidserver:0.1 -f docker/Dockerfile ./source_code
+
+
 ```
 
+## 镜像文件的导入导出
 
+```
+导出:
+docker save personreidserver:0.1 -o personreidserver_0.1.img
+导入:
+docker load < personreidserver_0.1.img
+```
 
 
 
 # Docker Compose
 
-
+[docker-compose.yml 配置文件编写详解](https://blog.csdn.net/qq_36148847/article/details/79427878)
 
 
 
@@ -321,3 +419,35 @@ services:
 
 
 
+# 时间相关
+
+```
+设置时区
+timedatectl set-timezone Asia/Shanghai
+关闭自动ntp校时(可选)
+timedatectl set-ntp false
+
+
+容器与宿主机时间保持一致:
+-v /etc/localtime:/etc/localtime
+
+
+容器可修改宿主机时间:
+--cap-add SYS_TIME -v /etc/localtime:/etc/localtime:rw
+
+
+对应到docker-compose:
+  app:
+    image: personreidserver:0.1
+    container_name: personreidserver
+    restart: always
+    cap_add:
+      - SYS_TIME
+    volumes:
+      - /etc/localtime:/etc/localtime
+
+
+```
+
+### 仅修改docker容器中的时间，而不影响宿主机的时间:
+[使用 libfaketime 修改 docker 容器时间](https://102no.com/2019/11/28/libfaketime-docker-change/)

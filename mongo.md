@@ -310,6 +310,17 @@ true
 #### 文档document
 
 ```
+针对名称是数字开头的集合
+不能使用db.collname.xxx的方式访问
+解决方案:
+db.getCollection("6012753003ff921ce04aea22").findOne()
+db["6006a4cb67b6bce724cd22ba"].find()
+
+```
+
+
+
+```
 插入一条文档(如果集合student不存在会自动创建)
 > db.student.insertOne({name:"小王子",age:18})
 {
