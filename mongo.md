@@ -836,5 +836,23 @@ db.workmate.find({interest:['画画','聚会','看电影']}, {name:1,interest:1,
 
 
 
-#### 
+# 异常断电
+
+http://mongoing.com/archives/3991
+
+```
+docker run -it --rm=true -v /app/data/mongo/data/db:/data/db mongo:latest /bin/bash
+
+
+进入数据文件夹
+cd /data/db 
+rm -r journal 
+rm -r mongod.lock 
+rm -r WiredTiger.lock
+mongod
+
+
+如果依旧不行 repair模式启动
+mongod --repair
+```
 

@@ -99,3 +99,16 @@ SET resource:lock "Redis Demo 3" EX 5
 PERSIST resource:lock
 ```
 
+
+
+# 异常断电
+
+```
+进入容器或者新建容器的终端，执行恢复操作
+
+docker run -it --rm=true -v /app/data/redis/data:/data redis /bin/sh
+
+cd /data
+redis-check-aof --fix appendonly.aof
+```
+
