@@ -429,7 +429,8 @@ timedatectl set-ntp false
 
 
 容器与宿主机时间保持一致:
--v /etc/localtime:/etc/localtime
+(在java里面发现仅仅映射localtime还不行,还要映射timezone, golang没问题)
+-v /etc/localtime:/etc/localtime -v /etc/timezone:/etc/timezone
 
 
 容器可修改宿主机时间:
@@ -445,6 +446,7 @@ timedatectl set-ntp false
       - SYS_TIME
     volumes:
       - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
 
 
 ```
